@@ -1,0 +1,22 @@
+Package: LTNLDA
+Type: Package
+Title: An implementation of a collapsed blocked Gibbs Sampler for the LTN-LDA model
+Version: 1.0
+Date: 2021-08-24
+Author: Patrick LeBlanc
+Maintainer: Patrick LeBlanc <patrick.m.leblanc@gmail.com>
+Description: A package implementing the LTN-LDA model proposed in PAPER.  There are two 
+    main functions in the package: LTNLDA and LTNLDA_Perplexity.  LTNLDA runs a collapsed 
+    blocked Gibbs sampler for the LTN-LDA model.  LTNLDA_Perplexity estimates the perplexity
+    of a fitted LTN-LDA model on a test set.  
+LazyData: true
+License: GPL (>= 3)
+Imports: Rcpp (>= 1.0.7), pgdraw, phyloseq, stats
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 7.1.1
+Depends: 
+    R (>= 2.10)
+Suggests: 
+    rmarkdown,
+    knitr
+VignetteBuilder: knitr

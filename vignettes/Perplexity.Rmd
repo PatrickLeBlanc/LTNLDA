@@ -1,0 +1,201 @@
+---
+title: "Perplexity"
+output: rmarkdown::html_vignette
+description: >
+  Only read this if you have read the LTN-LDA vignette first.  This is a
+  brief tutorial on how to partition your dataset into a training and test set as well as    how to use to the LTNLDA_Perplexity function to find the perplexity on the test set. 
+vignette: >
+  %\VignetteIndexEntry{Perplexity}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+LTN-LDA (LeBlanc and Ma XXXX) is a mixed-membership model which seeks to appropriately incorporate cross-sample heterogeneity in subcommunity compositions: a characteristic of the data prevalent in most microbiome studies.  Incorporating such cross-sample heterogeneity leads to substantially improved inference compared to existing models.  When running the LTNLDA function, the user must specify two parameters: the number of subcommunities $K$ and the cross-sample heterogeneity threshold $C$.  The method recommended to choose these values in (LeBlanc and Ma XXXX) involves performing cross-validation for different values of $C$ and $K$ using perplexity as a measure of out of sample predictive performance.  In this vignette, we sahll demonstrate how to find perplexity on a test set using the LTNLDA package.  
+
+# Data
+
+We load the data included with the LTNLDA package.  This is a modified version of the dataset analyzed in Dethlefsen and Relman 2011.  The original study analyzed the microbiome composition of three patients who were given two different five-day courses of the antibiotic ciproflaxin over the course of ten months.  We limit ourselves to only patient F.  The original data for patient F featured $2,852$ unique ASVs across $54$ samples.  We merged ASVs into taxa at their finest known taxa and pruned all taxa which did not total at least $100$ sequencing reads across all $54$ samples.  This resulted in $44$ taxa totaling $99.86$ percent of the original counts.  
+
+```{r load_data, cache = TRUE}
+library(phyloseq)
+data("ps",package = "LTNLDA")
+ps
+```
+
+For use in the LTNLDA package, it is important that our dataset, ps, is a phyloseq object.  Moreover, any phyloseq object used as in input in the LTNLDA function or the LTNLDA_Perplexity must have two features.  The first is that is must have a table of otu counts accessible with otu_table(ps).  
+
+```{r load_otu, cache = TRUE}
+otu = otu_table(ps)
+otu[1:5,1:5]
+```
+
+This object is a matrix where rows correspond to taxa, columns correspond to samples, and entry $i,j$ is the number of sequencing reads assigned to taxa $i$ in sample $j$.  The second object is a phylogenetic tree accessible with phy_tree(ps)$edge.  The phylogenetic tree for the test set must be exactly the same as the phylogenetic tree for the training set.
+
+```{r load_phy_tree, cache = TRUE}
+tree = phy_tree(ps)
+tree.edge = tree$edge
+head(tree.edge)
+```
+
+This object is an edge matrix encoding a phylogenetic tree.  Each row details one edge of the tree, where the entry in the first column is the tail of the edge and the entry in the second column is the head.  The root node appears only in the first column, and the leaves appear only in the second column.    
+
+As this vignette is purely for instructional purposes, we further restrict ourselves to consider only the first $10$ samples in the dataset.
+
+```{r shrink_ps,cache = TRUE}
+ps = subset_samples(ps,time < 11)
+```
+
+We now randomly partition this dataset into training and test sets of equal size.  
+
+```{r make_train_test, cache = TRUE}
+set.seed(1)
+
+#find total number of samples
+num_samples = ncol(otu_table(ps))
+
+#find the number of samples in the test set if we partition our dataset in half
+num_test_samples = round(num_samples/2)
+#randomly determine which samples are in the test set
+test_samples = sample(1:num_samples,num_test_samples) 
+
+#make a vector such that the d^th entry denotes the set membership of sample d
+set = rep("Train",num_samples)
+set[test_samples] = "Test"
+
+#Add this vector to the sample data of the phyloseq object
+metadata = sample_data(ps)
+metadata$Set = set
+sample_data(ps) = metadata
+
+#Partition the ps object into training and test sets
+train_ps = subset_samples(ps, set == "Train")
+train_ps
+test_ps = subset_samples(ps, set == "Test")
+test_ps
+```
+
+# Fitting LTN-LDA on the training set
+
+```{r load_ltnlda}
+library(LTNLDA)
+```
+
+In order to find the perplexity on the test set, we first need to fit the LTN-LDA model on the training set.  This is done using the LTNLDA function, which was covered in depth in the "LTN-LDA" vignette.  Note that we run the function for fewer iterations than are strictly speaking necessary in the interests of not cluttering the document with output.
+
+```{r run_ltnlda, cache = TRUE}
+K = 2
+threshold = 10
+burnin = 300
+iterations = 30
+thin = 10
+model = LTNLDA(train_ps,K,threshold,iterations,burnin,thin)
+```
+
+# Finding Perplexity
+
+Given that we have the output of the LTNLDA function on the training set and a test set, we can find the perplexity on the test set.  The default use of this function is:
+
+```{r run_perp_fake, eval = FALSE}
+perp = LTNLDA_Perplexity(model, test_ps)
+```
+
+## Additional Options
+
+We do not run the full version of the above code because it prints quite a bit of text to standard out and clutters the document.  Instead, we run a reduced version, but first we shall cover some additional and optional inputs to the LTNLDA function. 
+
+* iterations.  This input specifies the number of iterations to collect from the MCMC.  The default value is 1000.
+* burnin.  This input specifies the number of burnin iteraitons to run before we begin recording samples from the MCMC.  The default value is 10000.
+* thin.  The amount by which we thin the chain. A value of X means that 1 every X values is recorded after the burnin. The default value is 10.
+* alpha. A double specifying the prior on the subcommunity-sample proportions. The default value is 1.
+
+We now run the LTNLDA function for a smaller than default number of iterations:
+
+```{r run_perp, cache = TRUE}
+burnin = 300
+iterations = 30
+thin = 10
+perp = LTNLDA_Perplexity(model, test_ps, iterations, burnin, thin)
+```
+
+The LTNLDA_Perplexity function prints messages to standard out to inform the user that it is running and how much longer it has to run.  Note that for actual implementation we recommend running the Gibbs sampler for far longer than it was above --- the default values ought to be long enough for most applications.
+
+## Output
+
+The output of the LTNLDA_Perplexity function is a list.  There are three types of data contained in this list: a perplexity estimate for the test set as well as posterior mean parameter estimates and Markov chains  for the $\phi_d$ and $\psi_{p,d,k}$ on the test set.  The posterior mean estimates provide an easily accessible source of posterior inference while the markov chains allow users to assess variance and Markov Chain convergence.  We will now cover every output in greater detail.
+
+### Perplexity
+
+The Perplexity entry is a double which estimates the perplexity on the test set.  This value is found by employing a modified version of the document completion process detailed in section $5.1$ of (Wallach et al 2009).
+
+```{r Perplexity}
+Perplexity = perp$Perplexity
+Perplexity
+```
+
+### Mean_Post_Phi_d
+
+Mean_Post_Phi_d returns a matrix containing posterior mean estimates for the $\phi_{d}$ on the test set.  The $d^{th}$ row is a probability vector such that the $k^{th}$ entry gives the proportion of subcommunity $k$ in sample $d$. 
+
+```{r mean_post_phi}
+post_phi = perp$Mean_Post_Phi_d
+d = 1
+k = 1
+post_phi[d,]
+post_phi[d,k]
+```
+
+### Mean_Post_Psi_pdk
+
+Mean_Post_Psi_pdk returns an array containing posterior mean estimates for the $\psi_{p,d,k}$ on the test set.  The entry in the $p^{th}$ row of the $d^{th}$ column of the $k^{th}$ slice  gives the log-odds at node $p$ in sample $d$ and subcommunity $k$.  
+
+```{r mean_post_psi_pdk}
+post_psi = perp$Mean_Post_Psi_pdk
+p = 1
+d = 1
+k = 1
+post_psi[p,d,k]
+```
+
+### Chain_Phi
+
+Chain_Phi returns an array containing the Markov chain for the $\phi_d$ on the test set.  The $d^{th}$ row and the $k^{th}$ column contain the Markov chain for $\phi_{d,k}$.
+
+```{r chain_phi}
+chain_phi = perp$Chain_Phi
+k = 1
+d = 1
+plot(chain_phi[d,k,],type="l",
+     xlab = "Iteration",
+     ylab = "Phi_{d,k}",
+     main = "Trace Plot")
+```
+
+### Chain_Psi
+
+Chain_Psi returns a list containing the Markov chains for the $\psi_{p,d,k}$ on the test set.  The $k^{th}$ entry in this list returns an array containing the Markov chains for the $\psi_{\cdot,\cdot,k}$.  The $p^{th}$ column and $d^{th}$ slice contains the Markov chain for $\psi_{p,d,k}$.  
+
+```{r chain_psi}
+chain_psi = perp$Chain_Psi
+k = 1
+chain_psi_k = chain_psi[[k]]
+p = 1
+d = 1
+plot(chain_psi_k[,p,d],type="l",
+     xlab = "Iteration",
+     ylab = "Psi_{p,d,k}",
+     main = "Trace Plot")
+```
+
+# References 
+
+* Les Dethlefsen and David A. Relman. Incomplete recovery and individualized responses of the human distal gut microbiota to repeated antibiotic perturbation. Proceedings of the National Academy of the Sciences of the United States of America. 18(Supplement 1): 4554-4561, 2011.
+* LeBlanc and Ma
+*  Hanna M. Wallach, Iain Murray, Ruslan Salakhutdinov, and David Mimno. Evaluation methods for topic models. Proceedings of the 26th Annual International Conference on Machine Learning, page 1105–1112, 2009.

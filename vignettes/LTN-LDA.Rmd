@@ -1,0 +1,242 @@
+---
+title: "LTN-LDA"
+output: rmarkdown::html_vignette
+description: >
+  If this is your first time using LTNLDA, read this vignette first.  It is a
+  brief tutorial on how to use to the main function, LTNLDA, to analyze a phyloseq
+  object using the LTN-LDA model.  
+vignette: >
+  %\VignetteIndexEntry{LTN-LDA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+LTN-LDA (LeBlanc and Ma XXXX) is a mixed-membership model which seeks to appropriately incorporate cross-sample heterogeneity in subcommunity compositions: a characteristic of the data prevalent in most microbiome studies.  Incorporating such cross-sample heterogeneity leads to substantially improved inference compared to existing models. 
+
+# Data
+
+To demonstrate the use of LTNLDA function, we load the data included with the LTNLDA package.  This is a modified version of the dataset analyzed in Dethlefsen and Relman 2011.  The original study analyzed the microbiome composition of three patients who were given two different five-day courses of the antibiotic ciproflaxin over the course of ten months.  We limit ourselves to only patient F.  The original data for patient F featured $2,852$ unique ASVs across $54$ samples.  We merged ASVs into taxa at their finest known taxa and pruned all taxa which did not total at least $100$ sequencing reads across all $54$ samples.  This resulted in $44$ taxa totaling $99.86$ percent of the original counts.  
+
+```{r load_data, cache = TRUE}
+library(phyloseq)
+data("ps",package = "LTNLDA")
+ps
+```
+
+The LTNLDA function takes phyloseq objects as one of its inputs.  Moreover, any phyloseq object used as in input in the LTNLDA function must have two features.  The first is that is must have a table of otu counts accessible with otu_table(ps).  
+
+```{r load_otu, cache = TRUE}
+otu = otu_table(ps)
+otu[1:5,1:5]
+```
+
+This object is a matrix where rows correspond to taxa, columns correspond to samples, and entry $i,j$ is the number of sequencing reads assigned to taxa $i$ in sample $j$.  The second object is a phylogenetic tree accessible with phy_tree(ps)$edge.
+
+```{r load_phy_tree, cache = TRUE}
+tree = phy_tree(ps)
+tree.edge = tree$edge
+head(tree.edge)
+```
+
+This object is an edge matrix encoding a phylogenetic tree.  Each row details one edge of the tree, where the entry in the first column is the tail of the edge and the entry in the second column is the head.  The root node appears only in the first column, and the leaves appear only in the second column.    
+
+As this vignette is purely for instructional purposes, it will suffice to consider only the first five samples in the dataset.
+
+```{r shrink_ps,cache = TRUE}
+ps = subset_samples(ps,time < 6)
+```
+
+# LTNLDA
+
+```{r load_ltnlda}
+library(LTNLDA)
+```
+
+Given that we have a phyloseq object ps which possess the requisite data structures, we need specify only two more variables to run an LTN-LDA Gibbs sampler.  The first is the number of subcommunities, $K$, we choose to model.  The second, $C$, controls the level of cross-sample heterogeneity: ASVs which are descended from a node in the phylogenetic tree with less than $C$ are allowed to substitute for each other across samples in the distributions of ASVs-per-subcommunity.  We will detail how to choose $K$ and $C$ using perplexity in another vignette, for now take $K = 2$ and $C = 10$.  We now demonstrate the default use of the LTNLDA function:
+
+```{r run_ltnda_fake, eval = FALSE}
+K = 2
+threshold = 10
+model = LTNLDA(ps,K,threshold)
+```
+
+
+## Additional Options
+
+We do not run the full version of the above code because it prints quite a bit of text to standard out and clutters the document.  Instead, we run a reduced version, but first we shall cover some additional and optional inputs to the LTNLDA function. 
+
+* iterations.  This input specifies the number of iterations to collect from the MCMC.  The default value is 1000.
+* burnin.  This input specifies the number of burnin iteraitons to run before we begin recording samples from the MCMC.  The default value is 10000.
+* thin.  The amount by which we thin the chain. A value of X means that 1 every X values is recorded after the burnin. The default value is 10.
+* alpha. A double specifying the prior on the subcommunity-sample proportions. The default value is 1.
+* a1. A double specifying the shape parameter in an inverse-gamma distribution for cross-sample variance for nodes with less descendants than threshold. The default value is 10.
+* a2. A double specifying the shape parameter in an inverse-gamma distribution for cross-sample variance for nodes with greater than or equal to descendants than threshold. The default value is $10^4$.
+* $b$. A double specifying the rate parameter in an inverse-gamma distribution for cross-sample variance for all nodes. The default value is 10.
+* Lambda. A matrix specifying a covariance prior for the $\mu_k$. The default value is diag(V) where V is the number of leaves.
+
+We now run the LTNLDA function for a smaller than default number of iterations:
+
+```{r run_ltnlda, cache = TRUE}
+K = 2
+threshold = 10
+burnin = 300
+iterations = 30
+thin = 10
+model = LTNLDA(ps,K,threshold,iterations,burnin,thin)
+```
+
+The LTNLDA function prints messages to standard out to inform the user that it is running and how much longer it has to run.  Note that for actual implementation we recommend running the Gibbs sampler for far longer than it was above --- the default values ought to be long enough for most applications.  
+
+## Output
+
+The output of the LTNLDA function is a list.  There are two main types of data contained in this list: posterior mean parameter estimates and Markov chains.  The first provides an easily accessible source of posterior inference while the second allows users to assess variance and Markov Chain convergence.  We will now cover every output in greater detail.
+
+### Mean_Post_Phi_d
+
+Mean_Post_Phi_d returns a matrix containing posterior mean estimates for the $\phi_{d}$.  The $d^{th}$ row is a probability vector such that the $k^{th}$ entry gives the proportion of subcommunity $k$ in sample $d$. 
+
+```{r mean_post_phi}
+post_phi = model$Mean_Post_Phi_d
+d = 1
+k = 1
+post_phi[d,]
+post_phi[d,k]
+```
+
+### Mean_Post_Psi_pdk
+
+Mean_Post_Psi_pdk returns an array containing posterior mean estimates for the $\psi_{p,d,k}$.  The entry in the $p^{th}$ row of the $d^{th}$ column of the $k^{th}$ slice  gives the log-odds at node $p$ in sample $d$ and subcommunity $k$.  
+
+```{r mean_post_psi_pdk}
+post_psi = model$Mean_Post_Psi_pdk
+p = 1
+d = 1
+k = 1
+post_psi[p,d,k]
+```
+
+### Mean_Post_Beta_kd
+
+Mean_Post_Beta_kd returns an array containing posterior mean estimates for the $\beta_{k,d}$.  The probability vector in the $k^{th}$ row and $d^{th}$ column gives the sample-specific multinomial ASV-subcommunity distribution for the $k^{th}$ subcommunity in the $d^{th}$ sample.  The $v^{th}$ entry in this vector gives the incidence of the $v^{th}$ ASV.
+
+```{r mean_post_beta_kd}
+post_beta_kd = model$Mean_Post_Beta_kd
+k = 1
+d = 1
+post_beta_kd[k,d,]
+v = 1
+post_beta_kd[k,d,v]
+```
+
+### Mean_Post_Mu_k
+
+Mean_Post_Mu_k returns a matrix containing posterior mean estimates for the $\mu_k$.  The entry in the $p^{th}$ row and $k^{th}$ column contains the ``average" log-odds at node $p$ in subcommunity $k$.  
+
+```{r mean_post_mu}
+post_mu = model$Mean_Post_Mu_k
+p = 1
+k = 1
+post_mu[p,k]
+```
+
+### Mean_Post_Beta_k
+
+Mean_Post_Beta_k returns a matrix containing posterior mean estimates for the $\beta_{k}$.  The probability vector in the $k^{th}$ row gives the "average" multinomial ASV-subcommunity distribution for the $k^{th}$ subcommunity.  The $v^{th}$ entry in this vector gives the incidence of the $v^{th}$ ASV.
+
+```{r mean_post_beta_k}
+post_beta_k = model$Mean_Post_Beta_k
+k = 1
+post_beta_k[k,]
+v = 1
+post_beta_k[k,v]
+```
+
+### Mean_Post_Sigma_ppk
+
+Mean_Post_Sigma_ppk returns an array containing posterior mean estimates for the $\Sigma_k$.  The matrix in the $k^{th}$ slice gives the covariance matrix governing the cross-sample heterogeneity for the $k^{th}$ subcommunity.
+
+```{r mean_post_sigma}
+mean_post_sigma = model$Mean_Post_Sigma_ppk
+k = 1
+mean_post_sigma[1:5,1:5,k]
+```
+
+### Chain_Phi
+
+Chain_Phi returns an array containing the Markov chain for the $\phi_d$.  The $d^{th}$ row and the $k^{th}$ column contain the Markov chain for $\phi_{d,k}$.
+
+```{r chain_phi}
+chain_phi = model$Chain_Phi
+k = 1
+d = 1
+plot(chain_phi[d,k,],type="l",
+     xlab = "Iteration",
+     ylab = "Phi_{d,k}",
+     main = "Trace Plot")
+```
+
+### Chain_Psi
+
+Chain_Psi returns a list containing the Markov chains for the $\psi_{p,d,k}$.  The $k^{th}$ entry in this list returns an array containing the Markov chains for the $\psi_{\cdot,\cdot,k}$.  The $p^{th}$ column and $d^{th}$ slice contains the Markov chain for $\psi_{p,d,k}$.  
+```{r chain_psi}
+chain_psi = model$Chain_Psi
+k = 1
+chain_psi_k = chain_psi[[k]]
+p = 1
+d = 1
+plot(chain_psi_k[,p,d],type="l",
+     xlab = "Iteration",
+     ylab = "Psi_{p,d,k}",
+     main = "Trace Plot")
+```
+
+### Chain_Mu
+
+Chain_Mu returns a list containing the Markov chains for the $\mu_k$.  The $k^{th}$ entry in this list returns a matrix containing the Markov chains for the $\mu_{k,\cdot}$.  The $p^{th}$ column contains the Markov chain for $\mu_{k,p}$.  
+
+```{r chain_mu}
+chain_mu = model$Chain_Mu
+k = 1
+chain_mu_k = chain_mu[[k]]
+p = 1
+plot(chain_mu_k[,p],type="l",
+     xlab = "Iteration",
+     ylab = "Mu_{p,k}",
+     main = "Trace Plot")
+```
+
+### Chain_Sigma
+
+Chain_Sigma returns a list containing the Markov chains for the $\Sigma_k$.  The $k^{th}$ entry in this list returns an array containing the Markov chains for the $\Sigma_{\cdot, \cdot,k}$.  In particular, only the diagonal entries are nonzero and thus of interest.  The Markov chain for the variance parameter associated with node $p$ is contained in the $p^{th}$ column and $p^{th}$ slice of this array.  
+
+```{r chain_sigma}
+chain_sigma = model$Chain_Sigma
+k = 1
+chain_sigma_k = chain_sigma[[k]]
+p = 1
+plot(chain_sigma_k[,p,p],type="l",
+     xlab = "Iteration",
+     ylab = "Sigma_{p,p,k}",
+     main = "Trace Plot")
+```
+
+
+### Final_Iterate_Counts
+
+Final_Iterate_Counts returns the count of ASVs in sample $d$, descended from node $p$, and assigned to subcomunity $k$, in the final iterate of the Gibbs sampler.  
+
+```{r final_iterate_counts, cache = TRUE}
+final_iterate_counts = model$Final_Iterate_Counts
+```
+
+# References 
+
+* Les Dethlefsen and David A. Relman. Incomplete recovery and individualized responses of the human distal gut microbiota to repeated antibiotic perturbation. Proceedings of the National Academy of the Sciences of the United States of America. 18(Supplement 1): 4554-4561, 2011.
+* LeBlanc and Ma
