@@ -12,7 +12,7 @@ Summary(model, n = 5)
 \item{n}{We find the n most prevalent ASVs in each subcommunity, with proportions.}
 }
 \value{
-Do later
+A list with two entries.  Abundance is a vector of the average subcommunity prevalence in all samples in decreasing order. Top_ASVs is a list such tha the kth entry is the the top n ASVs characterizing the kth subcommunity (in decreasing order of average subcommunity prevalence) as well the corresponding ASV prevalencies.
 }
 \description{
 This function takes the output of an LTNLDA function as an input, and finds the average subcommunity abundance in decreasing order, as well as the top n ASVs characterizing each subcommunity.  More detailed information in "LTN-LDA" vignette.
@@ -21,7 +21,7 @@ This function takes the output of an LTNLDA function as an input, and finds the 
 data("ps",package = "LTNLDA")
 K = 2
 model = LTNLDA(ps,K)
-Summary(model)
+sum = Summary(model)
 }
 \references{
 ADD PAPER INFORMATION ONCE WE KNOW IT
