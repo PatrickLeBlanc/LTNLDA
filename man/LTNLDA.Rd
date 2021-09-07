@@ -7,7 +7,7 @@
 LTNLDA(
   ps,
   K,
-  threshold,
+  C = 5,
   iterations = 1000,
   burnin = 10000,
   thin = 10,
@@ -23,7 +23,7 @@ LTNLDA(
 
 \item{K}{An integer specifying the number of modeled subcommunities.}
 
-\item{threshold}{An integer specifying the threshold controlling cross-sample heterogeneity.}
+\item{C}{An integer specifying the threshold controlling cross-sample heterogeneity.  The default value is 5.  Using the default value may result in unreliable inference.}
 
 \item{iterations}{The number of iterations to record.  Default value is 1000.}
 
@@ -33,25 +33,32 @@ LTNLDA(
 
 \item{alpha}{A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.}
 
-\item{a1}{A double specifying the shape parameter for nodes with less descendants than threshold.  The default value is 10.}
+\item{a1}{A double specifying the shape parameter for nodes with less descendants than C.  The default value is 10.}
 
-\item{a2}{A double specifying the shape parameter for nodes with greater than or equal to descendants than threshold.  The default value is 10^4.}
+\item{a2}{A double specifying the shape parameter for nodes with greater than or equal to descendants than C.  The default value is 10^4.}
 
 \item{b}{A double specifying the rate parameter for all nodes.  The default value is 10.}
 
 \item{Lambda}{A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) where V is the number of leaves.}
 }
 \value{
-A list with 11 entries.  Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. Mean_Post_Psi_pdk contains the posterior mean estimates for the log-odds psi_{p,d,k}. Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}. Mean_Post_Mu_k contains the posterior mean estimates for the average lod-odds mu_k. Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. Mean_Post_Sigma_ppk contains the posterior mean estimates for the covariance matrices Sigma_k. Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}. Chain_Mu contains the Markov Chains for the mu_k. Chain_Sigma contains the Markov Chains for the Sigma_k. Final_Iterate_Counts contains  the y_{d,k}(A) count data for the final iteration.
+A list with 8 entries.  
+Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. 
+Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}.
+Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. 
+Chain_Phi contains the Markov Chains for the phi_d. 
+Chain_Psi contains the Markov Chains for the psi_{p,d,k}. 
+Chain_Mu contains the Markov Chains for the mu_k. 
+Chain_Sigma contains the Markov Chains for the Sigma_k. 
+phyloseq contains the phyloseq object the Gibbs sampler ran on.
 }
 \description{
-This function takes a phyloseq object, modeled, and modeled subcommunities and thresholds as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates and Markov Chains for various parameters, as well as the y_{d,k}(A) count data for the final iteration.  For a detailed example see the vignette "LTN-LDA".
+This function takes a phyloseq object and the modelled number of subcommunities as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates and Markov Chains for various parameters, as well as the y_{d,k}(A) count data for the final iteration.  For a detailed example see the vignette "LTN-LDA".
 }
 \examples{
 data("ps",package = "LTNLDA")
 K = 2
-threshold = 10
-model = LTNLDA(ps,K,threshold)
+model = LTNLDA(ps,K)
 }
 \references{
 ADD PAPER INFORMATION ONCE WE KNOW IT

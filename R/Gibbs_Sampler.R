@@ -1,6 +1,6 @@
 #' Runs an LTN-LDA Gibbs sampler.  
 #'
-#' This function takes a phyloseq object, modeled, and modeled subcommunities and thresholds as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates and Markov Chains for various parameters, as well as the y_{d,k}(A) count data for the final iteration.  For a detailed example see the vignette "LTN-LDA".
+#' This function takes a phyloseq object and the modelled number of subcommunities as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates and Markov Chains for various parameters, as well as the y_{d,k}(A) count data for the final iteration.  For a detailed example see the vignette "LTN-LDA".
 #'
 #' @param ps A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.
 #' @param K An integer specifying the number of modeled subcommunities.
@@ -13,11 +13,20 @@
 #' @param a2 A double specifying the shape parameter for nodes with greater than or equal to descendants than C.  The default value is 10^4.
 #' @param b A double specifying the rate parameter for all nodes.  The default value is 10.
 #' @param Lambda A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) where V is the number of leaves.
-#' @return A list with 11 entries.  Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. Mean_Post_Psi_pdk contains the posterior mean estimates for the log-odds psi_{p,d,k}. Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}. Mean_Post_Mu_k contains the posterior mean estimates for the average lod-odds mu_k. Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. Mean_Post_Sigma_ppk contains the posterior mean estimates for the covariance matrices Sigma_k. Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}. Chain_Mu contains the Markov Chains for the mu_k. Chain_Sigma contains the Markov Chains for the Sigma_k. Final_Iterate_Counts contains  the y_{d,k}(A) count data for the final iteration.  
+#' @return 
+#' A list with 8 entries.  
+#' Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. 
+#' Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}.
+#' Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. 
+#' Chain_Phi contains the Markov Chains for the phi_d. 
+#' Chain_Psi contains the Markov Chains for the psi_{p,d,k}. 
+#' Chain_Mu contains the Markov Chains for the mu_k. 
+#' Chain_Sigma contains the Markov Chains for the Sigma_k. 
+#' phyloseq contains the phyloseq object the Gibbs sampler ran on.  
 #' @examples
 #' data("ps",package = "LTNLDA")
 #' K = 2
-#' model = LTNLDA(ps,K,C)
+#' model = LTNLDA(ps,K)
 #' @references
 #' ADD PAPER INFORMATION ONCE WE KNOW IT
 #' @export
@@ -447,13 +456,15 @@ LTNLDA = function(ps, K, C = 5,
         cat("The burn-in period has begun. \n")
         results = LTN_Gibbs_C(results, f_pg, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, gam_shape_p, gam_rate_p, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat_C, ta_C, docs_C, ancestors_C, internal_nodes_C, leaf_success_C, leaf_failures_C, K, p, D, V, alpha, iterations, burnin, thin)
         cat("The Gibbs Sampler has completed. \n")
-        
+      
+        #unpack the results
         nc_dnt = results[[5]]
         chain_phi_dki = results[[4]]
         psi_chain_k_ipd = results[[3]]
         mu_chain_k_ip = results[[2]]
         Sigma_chain_k_ipp = results[[1]]
         
+        #find mean posterior psi_pdk        
         post_psi_pdk = array(0,dim=c(p,D,K))
         for(k in 1:K){
           post_psi_pd = matrix(0,nrow=p,ncol=D)
@@ -464,7 +475,7 @@ LTNLDA = function(ps, K, C = 5,
           post_psi_pdk[,,k] = post_psi_pd
         }
         
-        #draw theta_kdA values
+        #find theta_kdA values
         post_theta_kda = array(0,dim=c(K,D,A))
         for (k in 1:K){
           for (d in 1:D){
@@ -508,6 +519,7 @@ LTNLDA = function(ps, K, C = 5,
           }
         }
         
+        #psoterior Sigma means
         post_Sigma_ppk = array(0,dim=c(p,p,K))
         for(k in 1:K){
           temp = matrix(0,nrow=p,ncol=p)
@@ -517,6 +529,7 @@ LTNLDA = function(ps, K, C = 5,
           post_Sigma_ppk[,,k] = temp/iterations
         }
         
+        #posterior phi means
         post_phi_dk = matrix(0,nrow=D,ncol=K)
         for(d in 1:D){
           for(k in 1:K){
@@ -525,16 +538,14 @@ LTNLDA = function(ps, K, C = 5,
         }
         
         out = list(Mean_Post_Phi_d = post_phi_dk,
-                   Mean_Post_Psi_pdk = post_psi_pdk,
                    Mean_Post_Beta_kd = post_beta_kdv,
-                   Mean_Post_Mu_k = post_mu_pk,
                    Mean_Post_Beta_k = post_beta_kv,
-                   Mean_Post_Sigma_ppk = post_Sigma_ppk,
                    Chain_Phi = chain_phi_dki,
                    Chain_Psi = psi_chain_k_ipd,
                    Chain_Mu = mu_chain_k_ip,
                    Chain_Sigma = Sigma_chain_k_ipp,
-                   Final_Iterate_Counts = nc_dnt)
+                   phyloseq = ps
+                   )
         
         return(out)
         
