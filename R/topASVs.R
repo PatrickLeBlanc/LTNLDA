@@ -14,9 +14,8 @@
 #' ADD PAPER INFORMATION ONCE WE KNOW IT
 #' @export
 
-
-top_n = function(model, n = 5){
-
+topASVs = function(model, n = 5){
+  
   #check inputs to see if they have been specified or not
   if(is.null(model)){
     cat("Model is not specified. \n")

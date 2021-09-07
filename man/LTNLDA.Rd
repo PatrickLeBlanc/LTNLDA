@@ -53,7 +53,7 @@ Chain_Sigma contains the Markov Chains for the Sigma_k.
 phyloseq contains the phyloseq object the Gibbs sampler ran on.
 }
 \description{
-This function takes a phyloseq object and the modelled number of subcommunities as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates and Markov Chains for various parameters, as well as the y_{d,k}(A) count data for the final iteration.  For a detailed example see the vignette "LTN-LDA".
+This function takes a phyloseq object and the modelled number of subcommunities as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates for some parameters, Markov Chains for all meaningufl parameters, and the phyloseq object.  For a detailed example see the vignette "LTN-LDA".
 }
 \examples{
 data("ps",package = "LTNLDA")

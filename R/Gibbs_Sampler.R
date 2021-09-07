@@ -1,6 +1,6 @@
 #' Runs an LTN-LDA Gibbs sampler.  
 #'
-#' This function takes a phyloseq object and the modelled number of subcommunities as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates and Markov Chains for various parameters, as well as the y_{d,k}(A) count data for the final iteration.  For a detailed example see the vignette "LTN-LDA".
+#' This function takes a phyloseq object and the modelled number of subcommunities as inputs.  It runs a collapsed blocked Gibbs sampler for LTNLDA for these inputs, and returns a list containing posterior mean estimates for some parameters, Markov Chains for all meaningufl parameters, and the phyloseq object.  For a detailed example see the vignette "LTN-LDA".
 #'
 #' @param ps A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.
 #' @param K An integer specifying the number of modeled subcommunities.
