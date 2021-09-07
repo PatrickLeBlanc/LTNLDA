@@ -27,10 +27,10 @@ LTNLDA_Perplexity(
 \item{alpha}{A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.}
 }
 \value{
-A list with 5 entries. Perplexity is a double which is the estimated perplexity on the test set.   Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}.
+A list with 3 entries. Perplexity is a double which is the estimated perplexity on the test set.   Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}.
 }
 \description{
-This function takes the output of an LTNLDA function ran on the training set, an edge matrix specifying a tree (which should be the same tree as for the training set), and a matrix specifying counts of sequencing reads per sample on the test set. It runs a modified collapsed blocked Gibbs sampler for LTNLDA for these inputs to estimate the phi_{d} and psi_{p,d,k} on the test set, and returns a list containing a perplexity estimate on the test set as well as Markov Chains for the parameters.  For a detailed example see the vignette "Perplexity".
+This function takes the output of an LTNLDA function ran on the training set and a phyloseq object corresponding to a test set.  It runs a modified collapsed blocked Gibbs sampler for LTNLDA for these inputs to estimate the phi_{d} and psi_{p,d,k} on the test set, and returns a list containing a perplexity estimate on the test set as well as Markov Chains for the parameters.  For a detailed example see the vignette "Perplexity".
 }
 \examples{
 perp = LTNLDA_Perplexity(model, test_ps)

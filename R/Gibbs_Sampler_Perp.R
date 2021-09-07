@@ -1,6 +1,6 @@
 #' Runs a modified LTN-LDA Gibbs sampler to estimate perplexity on a test set.  
 #'
-#' This function takes the output of an LTNLDA function ran on the training set, an edge matrix specifying a tree (which should be the same tree as for the training set), and a matrix specifying counts of sequencing reads per sample on the test set. It runs a modified collapsed blocked Gibbs sampler for LTNLDA for these inputs to estimate the phi_{d} and psi_{p,d,k} on the test set, and returns a list containing a perplexity estimate on the test set as well as Markov Chains for the parameters.  For a detailed example see the vignette "Perplexity".
+#' This function takes the output of an LTNLDA function ran on the training set and a phyloseq object corresponding to a test set.  It runs a modified collapsed blocked Gibbs sampler for LTNLDA for these inputs to estimate the phi_{d} and psi_{p,d,k} on the test set, and returns a list containing a perplexity estimate on the test set as well as Markov Chains for the parameters.  For a detailed example see the vignette "Perplexity".
 #'
 #' @param model The output of an LTNLDA model trained on a training set.  
 #' @param ps A phyloseq object corresponding to the test set containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.
@@ -8,7 +8,7 @@
 #' @param burnin The number of burnin iterations to run before recording values.  The default value is 10000.
 #' @param thin The amount by which we thin the chain.  A value of X means that 1 every X values is recorded after the burnin.  The default value is 10.
 #' @param alpha A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.
-#' @return A list with 5 entries. Perplexity is a double which is the estimated perplexity on the test set.   Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}.
+#' @return A list with 3 entries. Perplexity is a double which is the estimated perplexity on the test set.   Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}.
 #' @examples
 #' perp = LTNLDA_Perplexity(model, test_ps)
 #' @references
