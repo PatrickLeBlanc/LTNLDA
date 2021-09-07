@@ -4,27 +4,26 @@
 #'
 #' @param ps A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.
 #' @param K An integer specifying the number of modeled subcommunities.
-#' @param threshold An integer specifying the threshold controlling cross-sample heterogeneity.
+#' @param C An integer specifying the threshold controlling cross-sample heterogeneity.  The default value is 5.  Using the default value may result in unreliable inference.
 #' @param iterations The number of iterations to record.  Default value is 1000.
 #' @param burnin The number of burnin iterations to run before recording values.  The default value is 10000.
 #' @param thin The amount by which we thin the chain.  A value of X means that 1 every X values is recorded after the burnin.  The default value is 10.
 #' @param alpha A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.
-#' @param a1 A double specifying the shape parameter for nodes with less descendants than threshold.  The default value is 10.
-#' @param a2 A double specifying the shape parameter for nodes with greater than or equal to descendants than threshold.  The default value is 10^4.
+#' @param a1 A double specifying the shape parameter for nodes with less descendants than C.  The default value is 10.
+#' @param a2 A double specifying the shape parameter for nodes with greater than or equal to descendants than C.  The default value is 10^4.
 #' @param b A double specifying the rate parameter for all nodes.  The default value is 10.
 #' @param Lambda A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) where V is the number of leaves.
 #' @return A list with 11 entries.  Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. Mean_Post_Psi_pdk contains the posterior mean estimates for the log-odds psi_{p,d,k}. Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}. Mean_Post_Mu_k contains the posterior mean estimates for the average lod-odds mu_k. Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. Mean_Post_Sigma_ppk contains the posterior mean estimates for the covariance matrices Sigma_k. Chain_Phi contains the Markov Chains for the phi_d. Chain_Psi contains the Markov Chains for the psi_{p,d,k}. Chain_Mu contains the Markov Chains for the mu_k. Chain_Sigma contains the Markov Chains for the Sigma_k. Final_Iterate_Counts contains  the y_{d,k}(A) count data for the final iteration.  
 #' @examples
 #' data("ps",package = "LTNLDA")
 #' K = 2
-#' threshold = 10
-#' model = LTNLDA(ps,K,threshold)
+#' model = LTNLDA(ps,K,C)
 #' @references
 #' ADD PAPER INFORMATION ONCE WE KNOW IT
 #' @export
 
 
-LTNLDA = function(ps, K, threshold,
+LTNLDA = function(ps, K, C = 5,
                 iterations = 1000, burnin = 10000, thin = 10,
                 alpha = 1, a1 = 10, a2 = 10^4, b = 10, 
                 Lambda = NULL){
@@ -36,9 +35,6 @@ LTNLDA = function(ps, K, threshold,
     if(is.null(K)){
       cat("K is not specified. \n")
     } else{
-      if(is.null(threshold)){
-        cat("threshold is not specified. \n")
-      } else{
         
         cat("Processing data. \n")
         
@@ -395,7 +391,7 @@ LTNLDA = function(ps, K, threshold,
         for(a in 1:p){
           num_leaves = length(c(left_leaves[[internal_nodes[a]]], right_leaves[[internal_nodes[a]]]))
           #modelled shrinkage
-          if(num_leaves<threshold){
+          if(num_leaves<C){
             gam_shape_p[a] = a1
           } else {
             gam_shape_p[a] = a2
@@ -543,7 +539,7 @@ LTNLDA = function(ps, K, threshold,
         return(out)
         
       }
-    }
+    
   }
   
   
