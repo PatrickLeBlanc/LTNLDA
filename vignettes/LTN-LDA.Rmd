@@ -4,7 +4,8 @@ output: rmarkdown::html_vignette
 description: >
   If this is your first time using LTNLDA, read this vignette first.  It is a
   brief tutorial on how to use to the main function, LTNLDA, to analyze a phyloseq
-  object using the LTN-LDA model.  
+  object using the LTN-LDA model and how to use the Summary function to find a high level
+  overview.  
 vignette: >
   %\VignetteIndexEntry{LTN-LDA}
   %\VignetteEngine{knitr::rmarkdown}
@@ -59,19 +60,26 @@ ps = subset_samples(ps,time < 6)
 library(LTNLDA)
 ```
 
-Given that we have a phyloseq object ps which possess the requisite data structures, we need specify only two more variables to run an LTN-LDA Gibbs sampler.  The first is the number of subcommunities, $K$, we choose to model.  The second, $C$, controls the level of cross-sample heterogeneity: ASVs which are descended from a node in the phylogenetic tree with less than $C$ are allowed to substitute for each other across samples in the distributions of ASVs-per-subcommunity.  We will detail how to choose $K$ and $C$ using perplexity in another vignette, for now take $K = 2$ and $C = 10$.  We now demonstrate the default use of the LTNLDA function:
+Given that we have a phyloseq object ps which possess the requisite data structures, we need specify only one more variable to run an LTN-LDA Gibbs sampler.  This is the number of subcommunities, $K$, we choose to model.  We now demonstrate the default use of the LTNLDA function:
 
 ```{r run_ltnda_fake, eval = FALSE}
 K = 2
-threshold = 10
-model = LTNLDA(ps,K,threshold)
+model = LTNLDA(ps,K)
 ```
 
+We also note here that the value of the second tuning parameter, $C$, the threshold controlling the level of cross-sample heterogeneity, has a default value equal to $5$.  This is unlikely to be optimal for many phylogenetic trees, and so we allow the user to set the value of $C$.  We will detail how to choose $K$ and $C$ using perplexity in another vignette, for now take $K = 2$ and $C = 10$.  
+
+```{r run_ltnda_fake_2, eval = FALSE}
+K = 2
+C = 10
+model = LTNLDA(ps,K,C)
+```
 
 ## Additional Options
 
 We do not run the full version of the above code because it prints quite a bit of text to standard out and clutters the document.  Instead, we run a reduced version, but first we shall cover some additional and optional inputs to the LTNLDA function. 
 
+* $C$.  This is the parameter controlling the level of cross-sample heterogeneity.  This has a default value equal to $5$.  This is likely to provide suboptimal inference for many phylogenetic trees, and so we heavily recommend taking care to choose an optimal value.
 * iterations.  This input specifies the number of iterations to collect from the MCMC.  The default value is 1000.
 * burnin.  This input specifies the number of burnin iteraitons to run before we begin recording samples from the MCMC.  The default value is 10000.
 * thin.  The amount by which we thin the chain. A value of X means that 1 every X values is recorded after the burnin. The default value is 10.
@@ -85,16 +93,43 @@ We now run the LTNLDA function for a smaller than default number of iterations:
 
 ```{r run_ltnlda, cache = TRUE}
 K = 2
-threshold = 10
 burnin = 300
 iterations = 30
 thin = 10
-model = LTNLDA(ps,K,threshold,iterations,burnin,thin)
+model = LTNLDA(ps,K,iterations = iterations,burnin = burnin,thin = thin)
 ```
 
 The LTNLDA function prints messages to standard out to inform the user that it is running and how much longer it has to run.  Note that for actual implementation we recommend running the Gibbs sampler for far longer than it was above --- the default values ought to be long enough for most applications.  
 
-## Output
+## Summary
+
+We also provide a function, Summary, to provide a high level summary of the result of an LTNLDA function. 
+
+```{r dem_sum}
+sum = Summary(model)
+```
+
+Summary returns a list with two components. The first, Abundance, is a matrix which provides the average abundance of each subcommunity in descending oder.
+
+```{r sum_abund}
+sum$Abundance
+```
+
+The other component, Top_ASVs, is a list providing the top $n$ ASVs in each subcommunity.  The $k^{th}$ entry in the list is a matrix where each row corresponds to a certain ASV and the entry is the prevalene of that ASV in subcommunity $k$.  The subcommunities are ordered according to descending average subcommunity abundance so that the subcommunities in Abundance and Top_ASVs have the same ordering.
+
+```{r sum_top}
+sum$Top_ASVs
+```
+
+By default, the function has $n = 5$, however this parameter can be modified.
+
+```{r sum_mod}
+top_n = 10
+sum = Summary(model, top_n)
+sum$Top_ASVs
+```
+
+## LTNLDA Output
 
 The output of the LTNLDA function is a list.  There are two main types of data contained in this list: posterior mean parameter estimates and Markov chains.  The first provides an easily accessible source of posterior inference while the second allows users to assess variance and Markov Chain convergence.  We will now cover every output in greater detail.
 
@@ -110,18 +145,6 @@ post_phi[d,]
 post_phi[d,k]
 ```
 
-### Mean_Post_Psi_pdk
-
-Mean_Post_Psi_pdk returns an array containing posterior mean estimates for the $\psi_{p,d,k}$.  The entry in the $p^{th}$ row of the $d^{th}$ column of the $k^{th}$ slice  gives the log-odds at node $p$ in sample $d$ and subcommunity $k$.  
-
-```{r mean_post_psi_pdk}
-post_psi = model$Mean_Post_Psi_pdk
-p = 1
-d = 1
-k = 1
-post_psi[p,d,k]
-```
-
 ### Mean_Post_Beta_kd
 
 Mean_Post_Beta_kd returns an array containing posterior mean estimates for the $\beta_{k,d}$.  The probability vector in the $k^{th}$ row and $d^{th}$ column gives the sample-specific multinomial ASV-subcommunity distribution for the $k^{th}$ subcommunity in the $d^{th}$ sample.  The $v^{th}$ entry in this vector gives the incidence of the $v^{th}$ ASV.
@@ -135,17 +158,6 @@ v = 1
 post_beta_kd[k,d,v]
 ```
 
-### Mean_Post_Mu_k
-
-Mean_Post_Mu_k returns a matrix containing posterior mean estimates for the $\mu_k$.  The entry in the $p^{th}$ row and $k^{th}$ column contains the ``average" log-odds at node $p$ in subcommunity $k$.  
-
-```{r mean_post_mu}
-post_mu = model$Mean_Post_Mu_k
-p = 1
-k = 1
-post_mu[p,k]
-```
-
 ### Mean_Post_Beta_k
 
 Mean_Post_Beta_k returns a matrix containing posterior mean estimates for the $\beta_{k}$.  The probability vector in the $k^{th}$ row gives the "average" multinomial ASV-subcommunity distribution for the $k^{th}$ subcommunity.  The $v^{th}$ entry in this vector gives the incidence of the $v^{th}$ ASV.
@@ -156,16 +168,6 @@ k = 1
 post_beta_k[k,]
 v = 1
 post_beta_k[k,v]
-```
-
-### Mean_Post_Sigma_ppk
-
-Mean_Post_Sigma_ppk returns an array containing posterior mean estimates for the $\Sigma_k$.  The matrix in the $k^{th}$ slice gives the covariance matrix governing the cross-sample heterogeneity for the $k^{th}$ subcommunity.
-
-```{r mean_post_sigma}
-mean_post_sigma = model$Mean_Post_Sigma_ppk
-k = 1
-mean_post_sigma[1:5,1:5,k]
 ```
 
 ### Chain_Phi
@@ -228,12 +230,13 @@ plot(chain_sigma_k[,p,p],type="l",
 ```
 
 
-### Final_Iterate_Counts
+### phyloseq
 
-Final_Iterate_Counts returns the count of ASVs in sample $d$, descended from node $p$, and assigned to subcomunity $k$, in the final iterate of the Gibbs sampler.  
+phyloseq returns the phyloseq object analyzed by the data.  
 
 ```{r final_iterate_counts, cache = TRUE}
-final_iterate_counts = model$Final_Iterate_Counts
+ps = model$phyloseq
+ps
 ```
 
 # References 
