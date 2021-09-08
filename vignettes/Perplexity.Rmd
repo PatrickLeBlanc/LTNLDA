@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-LTN-LDA (LeBlanc and Ma XXXX) is a mixed-membership model which seeks to appropriately incorporate cross-sample heterogeneity in subcommunity compositions: a characteristic of the data prevalent in most microbiome studies.  Incorporating such cross-sample heterogeneity leads to substantially improved inference compared to existing models.  When running the LTNLDA function, the user must specify two parameters: the number of subcommunities $K$ and the cross-sample heterogeneity threshold $C$.  The method recommended to choose these values in (LeBlanc and Ma XXXX) involves performing cross-validation for different values of $C$ and $K$ using perplexity as a measure of out of sample predictive performance.  In this vignette, we sahll demonstrate how to find perplexity on a test set using the LTNLDA package.  
+LTN-LDA (LeBlanc and Ma XXXX) is a mixed-membership model which seeks to appropriately incorporate cross-sample heterogeneity in subcommunity compositions: a characteristic of the data prevalent in most microbiome studies.  Incorporating such cross-sample heterogeneity leads to substantially improved inference compared to existing models.  When running the LTNLDA function, the user must specify two parameters: the number of subcommunities $K$ and the cross-sample heterogeneity threshold $C$.  The method recommended to choose these values in (LeBlanc and Ma XXXX) involves performing cross-validation for different values of $C$ and $K$ using perplexity as a measure of out of sample predictive performance.  In this vignette, we shall demonstrate how to find perplexity on a test set using the LTNLDA package.  
 
 # Data
 
@@ -92,11 +92,11 @@ In order to find the perplexity on the test set, we first need to fit the LTN-LD
 
 ```{r run_ltnlda, cache = TRUE}
 K = 2
-threshold = 10
+C = 10
 burnin = 300
 iterations = 30
 thin = 10
-model = LTNLDA(train_ps,K,threshold,iterations,burnin,thin)
+model = LTNLDA(train_ps,K,C,iterations,burnin,thin)
 ```
 
 # Finding Perplexity
@@ -129,7 +129,7 @@ The LTNLDA_Perplexity function prints messages to standard out to inform the use
 
 ## Output
 
-The output of the LTNLDA_Perplexity function is a list.  There are three types of data contained in this list: a perplexity estimate for the test set as well as posterior mean parameter estimates and Markov chains  for the $\phi_d$ and $\psi_{p,d,k}$ on the test set.  The posterior mean estimates provide an easily accessible source of posterior inference while the markov chains allow users to assess variance and Markov Chain convergence.  We will now cover every output in greater detail.
+The output of the LTNLDA_Perplexity function is a list.  There are two types of data contained in this list: a perplexity estimate for the test set as well as Markov chains  for the $\phi_d$ and $\psi_{p,d,k}$ on the test set. We will now cover every output in greater detail.
 
 ### Perplexity
 
@@ -139,31 +139,6 @@ The Perplexity entry is a double which estimates the perplexity on the test set.
 Perplexity = perp$Perplexity
 Perplexity
 ```
-
-### Mean_Post_Phi_d
-
-Mean_Post_Phi_d returns a matrix containing posterior mean estimates for the $\phi_{d}$ on the test set.  The $d^{th}$ row is a probability vector such that the $k^{th}$ entry gives the proportion of subcommunity $k$ in sample $d$. 
-
-```{r mean_post_phi}
-post_phi = perp$Mean_Post_Phi_d
-d = 1
-k = 1
-post_phi[d,]
-post_phi[d,k]
-```
-
-### Mean_Post_Psi_pdk
-
-Mean_Post_Psi_pdk returns an array containing posterior mean estimates for the $\psi_{p,d,k}$ on the test set.  The entry in the $p^{th}$ row of the $d^{th}$ column of the $k^{th}$ slice  gives the log-odds at node $p$ in sample $d$ and subcommunity $k$.  
-
-```{r mean_post_psi_pdk}
-post_psi = perp$Mean_Post_Psi_pdk
-p = 1
-d = 1
-k = 1
-post_psi[p,d,k]
-```
-
 ### Chain_Phi
 
 Chain_Phi returns an array containing the Markov chain for the $\phi_d$ on the test set.  The $d^{th}$ row and the $k^{th}$ column contain the Markov chain for $\phi_{d,k}$.
