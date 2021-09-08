@@ -35,7 +35,7 @@ perplexity of a fitted LTN-LDA model on a test set.
 We present code for running LTNLDA on the dataset included in the LTNLDA
 package, a modified version of the data collected in (Dethlefsen and
 Relman 2011). The user must choose the number of subcommunities and the
-threshold controlling cross-sample heterogeneit. The following code is
+threshold controlling cross-sample heterogeneity. The following code is
 presented, but not run. A more detailed explanation is presented in the
 “LTN-LDA” vignette.
 
@@ -46,10 +46,19 @@ library(LTNLDA)
 data("ps",package = "LTNLDA")
 #choose the number of subcommunities
 K = 2
-#choose the threshold controlling cross-sample heterogeneity
-threshold = 10
 #fit the model
-model = LTNLDA(ps,K,threshold)
+model = LTNLDA(ps,K)
+```
+
+## Summary
+
+Summary is a function which provides a high level summary of the model’s
+inference. We include the average abundance of subcommunities across
+samples as well as the top *n* ASVs in each subcommunity and their
+prevalances. More information is included in the “LTN-LDA” vignette.
+
+``` r
+sum = Summary(model)
 ```
 
 ## LTNLDA\_Perplexity
@@ -95,10 +104,8 @@ test_ps = subset_samples(ps, set == "Test")
 #Run Analysis 
 #choose the number of subcommunities
 K = 2
-#choose the threshold controlling cross-sample heterogeneity
-threshold = 10
 #fit the model
-model = LTNLDA(ps,K,threshold)
+model = LTNLDA(ps,K)
 
 #run perplexity analysis analysis
 perp = LTNLDA_Perplexity(model = model, ps = test_ps)
