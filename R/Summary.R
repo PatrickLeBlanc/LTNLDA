@@ -44,7 +44,7 @@ Summary = function(model, n = 5){
     ps = model$phyloseq
     
     #find the names of the ASVs
-    tax = tax_table(ps)
+    tax = phyloseq::tax_table(ps)
     ASV_names = rownames(tax)
     
     #make a list for the top ASV

@@ -32,7 +32,7 @@ LTNLDA_Perplexity = function(model, ps,
             tree.edge = phyloseq::phy_tree(ps)$edge
             test_dtm = phyloseq::otu_table(ps)
             #load K from model 
-            K = dim(model$Final_Iterate_Counts)[3]
+            K = dim(model$Mean_Post_Phi_d)[2]
             
             ####################################################
             # Convert Tree Edge Matrix into useable structures #
@@ -404,8 +404,31 @@ LTNLDA_Perplexity = function(model, ps,
             ###################################
             # Load posterior means from model #
             ###################################
-            post_Sigma_ppk = model$Mean_Post_Sigma_ppk
-            post_mu_pk = model$Mean_Post_Mu_k
+            
+            #first load markov chains
+            mu_chain_k_ip = model$Chain_Mu
+            Sigma_chain_k_ipp = model$Chain_Sigma
+            #now find posterior means
+            
+            #posterior mu mean
+            post_mu_pk = matrix(0,nrow=p,ncol=K)
+            for(k in 1:K){
+              for(a in 1:p){
+                post_mu_pk[a,k] = mean(mu_chain_k_ip[[k]][,a])
+              }
+            }
+  
+            #posterior Sigma means
+            post_Sigma_ppk = array(0,dim=c(p,p,K))
+            for(k in 1:K){
+              entry = Sigma_chain_k_ipp[[k]]
+              runtime = dim(entry)[1]
+              temp = matrix(0,nrow=p,ncol=p)
+              for(i in 1:runtime){
+                temp = temp + entry[i,,]
+              }
+              post_Sigma_ppk[,,k] = temp/runtime
+            }
             #Initialize global parameters to these mean values
 
 
