@@ -131,6 +131,6 @@ browseVignettes("LTNLDA")
 Additionally, I inspiration for coding a collapsed LDA Gibbs sampler
 from:
 
-\*Brooks, Andrew. “Latent Dirichlet Allocation – under the hood”. Web
-blog post. data science side projects, thoughts, & experiments.
-github.io. January 17, 2015. Web. September 11, 2021.
+-   Brooks, Andrew. “Latent Dirichlet Allocation – under the hood”. Web
+    blog post. data science side projects, thoughts, & experiments.
+    github.io. January 17, 2015. Web. September 11, 2021.
