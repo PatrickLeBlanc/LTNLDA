@@ -25,6 +25,8 @@ Summary = function(model, n = 5){
     # Find average abundances and decreasing order
     #recover average ASV-subcommunity distributions
     post_phi_dk = model$Mean_Post_Phi_d
+    #recover the number of subcommunities
+    K = dim(model$Mean_Post_Phi_d)[2]
     #recover average abundances
     avg_abund = apply(post_phi_dk,2,mean)
     abund_ord = order(avg_abund,decreasing = TRUE)
