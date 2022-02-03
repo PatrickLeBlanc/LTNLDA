@@ -13,7 +13,9 @@
 #' @param b_L A double which is multipled by the degrees of freedom in the Inverse Wishart prior for the lower covariance matrix.  The default value is 50.
 #' @param a_U A double which is multipled by the scale matrix in the Inverse Wishart prior for the upeer covariance matrix.  The default value is 10^4.
 #' @param b_U A double which is multipled by the degrees of freedom in the Inverse Wishart prior for the upper covariance matrix.  The default value is 10.
-#' @param Lambda A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) where V is the number of leaves.
+#' @param r A double serving as a hyperparameter for the Bayesian GLasso prior.  The default value is 1.
+#' @param q A double serving as a hyperparameter for the Bayesian GLasso prior.  The default value is 1.
+#' @param Lambda A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) wher0e V is the number of leaves.
 #' @return 
 #' A list with 8 entries.  
 #' Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. 
@@ -33,10 +35,11 @@
 #' @export
 
 
-LTNLDA_cov = function(ps, K, C = 5,
-                  iterations = 1000, burnin = 10000, thin = 10,
-                  alpha = 1, a_L = 10, b_L = 50, a_U = 10^4, b_U = 10, 
-                  Lambda = NULL){
+LTNLDA_block_cov = function(ps, K, C = 5,
+                      iterations = 1000, burnin = 10000, thin = 10,
+                      alpha = 1, a_L = 10, b_L = 50, a_U = 10^4, b_U = 10, 
+                      r = 100, q = 100,
+                      Lambda = NULL){
   
   #check inputs to see if they have been specified or not
   if(is.null(ps)){
@@ -258,7 +261,9 @@ LTNLDA_cov = function(ps, K, C = 5,
       #initialized to diagonal matrices
       Phi_U = diag(p_U)
       Phi_L = diag(p_L)
-      
+      #make noise matrix 
+      noise = 0.0000001*diag(p_L)
+
       #check if Lambda has been specified --- if not, specify as identity matrix
       if(is.null(Lambda)){
         Lambda = diag(p)
@@ -473,7 +478,7 @@ LTNLDA_cov = function(ps, K, C = 5,
       results[[1]] = Sigma_chain_k_ipp
       
       cat("The burn-in period has begun. \n")
-      results = LTN_Gibbs_cov_C(results, f_pg, f_iwish, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes_C, a_U, b_U, Phi_U, L_nodes_C, a_L, b_L, Phi_L, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat_C, ta_C, docs_C, ancestors_C, internal_nodes_C, leaf_success_C, leaf_failures_C, K, p, p_U, p_L, D, V, alpha, iterations, burnin, thin)
+      results = LTN_Gibbs_cov_block_C(results, f_pg, f_iwish, f_bglasso, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes_C, a_U, b_U, Phi_U, L_nodes_C, a_L, b_L, Phi_L, r, q, noise, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat_C, ta_C, docs_C, ancestors_C, internal_nodes_C, leaf_success_C, leaf_failures_C, K, p, p_U, p_L, D, V, alpha, iterations, burnin, thin)
       cat("The Gibbs Sampler has completed. \n")
       
       #unpack the results

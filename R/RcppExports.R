@@ -9,6 +9,10 @@ LTN_Gibbs_cov_C <- function(results, f_pg, f_iwish, Sigma_ppk, W_ppk, mu_pk, v_p
     .Call(`_LTNLDA_LTN_Gibbs_cov_C`, results, f_pg, f_iwish, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes, a_U, b_U, Phi_U, L_nodes, a_L, b_L, Phi_L, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, p_U, p_L, D, V, alpha, iterations, warmup, thin)
 }
 
+LTN_Gibbs_cov_block_C <- function(results, f_pg, f_iwish, f_bglasso, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes, a_U, b_U, Phi_U, L_nodes, a_L, b_L, Phi_L, r, q, noise, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, p_U, p_L, D, V, alpha, iterations, warmup, thin) {
+    .Call(`_LTNLDA_LTN_Gibbs_cov_block_C`, results, f_pg, f_iwish, f_bglasso, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes, a_U, b_U, Phi_U, L_nodes, a_L, b_L, Phi_L, r, q, noise, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, p_U, p_L, D, V, alpha, iterations, warmup, thin)
+}
+
 LTN_Gibbs_Perp_C <- function(results, f_pg, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, chain_phi_dki, psi_chain_k_ipd, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, D, V, alpha, iterations, warmup, thin) {
     .Call(`_LTNLDA_LTN_Gibbs_Perp_C`, results, f_pg, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, chain_phi_dki, psi_chain_k_ipd, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, D, V, alpha, iterations, warmup, thin)
 }
