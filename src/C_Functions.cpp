@@ -1743,19 +1743,21 @@ List LTN_Gibbs_Perp_C(List &results, Function f_pg,
 }
 
 // [[Rcpp::export]]
-List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Function f_gwish_cont, List &gwish_k,
-                     arma::cube &Sigma_ppk, arma::cube &W_ppk, arma::mat &mu_pk, 
+List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Function f_gwish,
+                     arma::cube &Sigma_ppk, arma::cube &W_ppk, arma::cube &G_L_ppk, double &g_prior,
+                     arma::mat &upper_coord_L, arma::mat &exist_ind_L_tk, arma::mat &rates_L_tk, arma::vec &waiting_times_L_k,
+                     arma::mat &mu_pk, 
                      arma::cube &v_pdk, arma::cube &psi_pdk, arma::cube &kappa_pdk,
                      arma::cube &theta_kda, arma::cube &beta_kdv, 
                      arma::mat &Lambda_inv,
                      arma::vec &U_nodes, double &a_U, double &b_U, arma::mat &Phi_U,
                      arma::vec &L_nodes, double &a_L, double &b_L, arma::mat &Phi_L,
-                     arma::cube &chain_phi_dki, List &psi_chain_k_ipd, List &mu_chain_k_ip, List &Sigma_chain_k_ipp,
+                     arma::cube &chain_phi_dki, List &psi_chain_k_ipd, List &mu_chain_k_ip, List &Sigma_chain_k_ipp, arma::cube &chain_existind_L_itk,
                      arma::cube &nc_dnt, arma::mat &dt, 
                      arma::mat &descendants_mat,
                      List &ta, List &docs, List &ancestors,
                      arma::vec &internal_nodes, List &leaf_success, List &leaf_failures,
-                     int &K, int &p, int &p_U, int &p_L, int &D, int &V, double &alpha,int &iterations, int &warmup, int &thin){
+                     int &K, int &p, int &p_U, int &p_L,int &num_upptri_L, int &D, int &V, double &alpha,int &iterations, int &warmup, int &thin){
   
   //Initialize data structures
   
@@ -1791,16 +1793,46 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
   arma::mat X_L(D,p_L);
   
   arma::mat Sigma_L(p_L,p_L);
-  arma::mat Sigma_L_inv(p_L,p_L);
+  arma::mat W_L(p_L,p_L);
+  arma::mat S_L(p_L,p_L);
+  NumericMatrix W_L_temp(p_L,p_L);
+  arma::mat G_L(p,p);
+  arma::vec exist_ind_L(p);
+  arma::vec rates_L(p);
+  double waiting_time_L;
+  double m_L_star = a_L*(p_L+2) + D;
+  arma::mat M_L = b_L*Phi_L;
+  arma::mat M_L_star(p,p);
   
-  List gwish_out = gwish_k[0];
+  int row_ind;
+  int col_ind;
+  int sub_ct_i = 0;
+  int sub_ct_ii=0;
   
+  arma::mat W_L_0(p_L,p_L);
+  arma::mat W_L_0_left(1,p_L-1);
+  arma::mat W_L_0_right(p_L-1,1);
+  arma::mat W_L_0_temp(1,1);
+  arma::mat W_L_0_mid(p_L-1,p_L-1);
   
+  arma::mat W_L_1(p_L,p_L);
+  arma::mat W_L_1_left(2,p_L-2);
+  arma::mat W_L_1_right(p_L-2,2);
+  arma::mat W_L_1_mid(p_L-2,p_L-2);
+  arma::mat W_L_1_temp(2,2);
+  
+  double prob;
+  double log_2pi = log(2) + log(3.14159265358979323846);
+  
+  NumericMatrix W_L_tild_temp(p_L,p_L);
+  arma::mat W_L_tild(p_L,p_L);
+  
+  arma::vec probs_rate_L(p_L);
+  int selected_edge;
+  
+  //Iterate constructs
   int it = 0;
-  
-  
-  
-  int n_it = thin*iterations + warmup;
+  int n_it = iterations + warmup;
   
   
   for(int iterate =0; iterate < n_it; iterate++){
@@ -1911,12 +1943,15 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
       // int k = 0;
       Sigma = Sigma_ppk.slice(k);
       W = W_ppk.slice(k);
+      G_L = G_L_ppk.slice(k);
+      exist_ind_L = exist_ind_L_tk.col(k);
+      rates_L = rates_L_tk.col(k);
+      waiting_time_L = waiting_times_L_k[k];
       mu = mu_pk.col(k);
       v = v_pdk.slice(k);
       psi = psi_pdk.slice(k);
       kappa = kappa_pdk.slice(k);
-      gwish_out = gwish_k[k];
-      
+
       
       //////////////
       // Update v //
@@ -2039,17 +2074,404 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
         }
       } 
       X_L = trans(psi_L_mat-mu_L_mat);
+      //Find S_L
+      S_L = trans(X_L)*X_L;
+      //Find Phi_L_star
+      M_L_star = b_L*Phi_L + S_L;
       
       //Find Sigma_L
-      gwish_out = f_gwish_cont(X_L, gwish_out, a_L*(p_L+2));
-      
-      NumericMatrix Sigma_inv_L_draw = gwish_out[3];
-      for(int sig_draw_i=0; sig_draw_i<p_L; sig_draw_i++){
-        for(int sig_draw_ii=0; sig_draw_ii<p_L; sig_draw_ii++){
-          Sigma_L_inv(sig_draw_i,sig_draw_ii) = Sigma_inv_L_draw(sig_draw_i,sig_draw_ii);
+      for(int sig_L_i = 0; sig_L_i<p_L; sig_L_i++){
+        for(int sig_L_ii = 0; sig_L_ii<p_L; sig_L_ii++){
+          Sigma_L(sig_L_i,sig_L_ii) = Sigma(L_nodes[sig_L_i],L_nodes[sig_L_ii]);
         }
       }
-      Sigma_L = arma::inv(Sigma_L_inv);
+      //Find W_L
+      W_L = arma::inv(Sigma_L);
+      
+      /////////////////
+      //  Birth/Death //
+      /////////////////
+      
+      for(int rate_ct=0; rate_ct<num_upptri_L; rate_ct++){
+        // int rate_ct = 2;
+        if(exist_ind_L[rate_ct]>0){ //If the edge exists, find the death rate
+          //Find indices
+          row_ind = upper_coord_L(rate_ct,0);
+          col_ind = upper_coord_L(rate_ct,1);
+          
+          //Numerator
+          
+          //Find W_0
+          W_L_0 = W_L;
+          //Set covariance (i,j) and (j,i) equal to 0
+          W_L_0(row_ind,col_ind) = 0;
+          W_L_0(col_ind,row_ind) = 0;
+          //Find variance for (j,j)
+          //Subset matrix
+          sub_ct_i = 0;
+          for(int w_0_ct=0; w_0_ct < p_L; w_0_ct++){
+            if(w_0_ct != col_ind){
+              //find the left vector
+              W_L_0_left(0,sub_ct_i) = W_L(col_ind, w_0_ct);
+              //find the right vector
+              W_L_0_right(sub_ct_i,0) = W_L(w_0_ct,col_ind);
+              
+              //find the middle matrix
+              sub_ct_ii =0;
+              for(int w_0_ct_ii=0; w_0_ct_ii<p_L; w_0_ct_ii++){
+                if(w_0_ct_ii != col_ind){
+                  W_L_0_mid(sub_ct_i,sub_ct_ii) = W_L(w_0_ct,w_0_ct_ii);
+                  sub_ct_ii +=1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_0_mid = arma::inv(W_L_0_mid);
+          //compute variance and enter into W_0
+          W_L_0_temp = W_L_0_left * W_L_0_mid * W_L_0_right;
+          W_L_0(col_ind,col_ind) = W_L_0_temp(0,0);
+          
+          
+          //Find W_1
+          W_L_1 = W_L;
+          //subset matrix
+          sub_ct_i= 0;
+          for(int w_1_ct_i =0; w_1_ct_i<p_L; w_1_ct_i++){
+            if(w_1_ct_i != row_ind & w_1_ct_i != col_ind){
+              //subset w_1_left
+              W_L_1_left(0,sub_ct_i) = W_L(row_ind,w_1_ct_i);
+              W_L_1_left(1,sub_ct_i) = W_L(col_ind,w_1_ct_i);
+              
+              //subset w_1_right
+              W_L_1_right(sub_ct_i,0) = W_L(w_1_ct_i,row_ind);
+              W_L_1_right(sub_ct_i,1) = W_L(w_1_ct_i,col_ind);
+              
+              //subset w_1_mid
+              sub_ct_ii = 0;
+              for(int w_1_ct_ii=0; w_1_ct_ii<p_L; w_1_ct_ii++){
+                if(w_1_ct_ii != row_ind & w_1_ct_ii != col_ind){
+                  W_L_1_mid(sub_ct_i,sub_ct_ii) = W_L(w_1_ct_i, w_1_ct_ii);
+                  sub_ct_ii += 1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_1_mid = arma::inv(W_L_1_mid);
+          //Compute matrix and enter into W_1
+          W_L_1_temp = W_L_1_left * W_L_1_mid * W_L_1_right;
+          W_L_1(row_ind,row_ind) = W_L_1_temp(0,0);
+          W_L_1(row_ind,col_ind) = W_L_1_temp(0,1);
+          W_L_1(col_ind,row_ind) = W_L_1_temp(1,0);
+          W_L_1(col_ind,col_ind) = W_L_1_temp(1,1);
+          
+          //Find numerator value
+          prob = 0.5*(log(M_L_star(col_ind,col_ind)) - log_2pi - log(W_L(row_ind,row_ind) - W_L_1(row_ind,row_ind))) - 0.5*(arma::trace(M_L_star*(W_L_0-W_L_1)) - (M_L_star(row_ind,row_ind) - M_L_star(row_ind,col_ind)*M_L_star(row_ind,col_ind)/M_L_star(col_ind,col_ind))*(W_L(row_ind,row_ind) - W_L_1(row_ind,row_ind)));
+          
+          //Find denominator
+          
+          //Draw matrix from prior
+          W_L_tild_temp = f_gwish(G_L,a_L*(p_L+2),b_L*Phi_L);
+          for(int w_ct_i=0; w_ct_i<p_L; w_ct_i++){
+            for(int w_ct_ii=0; w_ct_ii<p_L; w_ct_ii++){
+              W_L_tild(w_ct_i,w_ct_ii) = W_L_tild_temp(w_ct_i,w_ct_ii);
+            }
+          }
+          
+          //Find W_0
+          W_L_0 = W_L_tild;
+          //Set covariance (i,j) and (j,i) equal to 0
+          W_L_0(row_ind,col_ind) = 0;
+          W_L_0(col_ind,row_ind) = 0;
+          //Find variance for (j,j)
+          //Subset matrix
+          sub_ct_i = 0;
+          for(int w_0_ct=0; w_0_ct < p_L; w_0_ct++){
+            if(w_0_ct != col_ind){
+              //find the left vector
+              W_L_0_left(0,sub_ct_i) = W_L_tild(col_ind, w_0_ct);
+              //find the right vector
+              W_L_0_right(sub_ct_i,0) = W_L_tild(w_0_ct,col_ind);
+              
+              //find the middle matrix
+              sub_ct_ii =0;
+              for(int w_0_ct_ii=0; w_0_ct_ii<p_L; w_0_ct_ii++){
+                if(w_0_ct_ii != col_ind){
+                  W_L_0_mid(sub_ct_i,sub_ct_ii) = W_L_tild(w_0_ct,w_0_ct_ii);
+                  sub_ct_ii +=1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_0_mid = arma::inv(W_L_0_mid);
+          //compute variance and enter into W_0
+          W_L_0_temp = W_L_0_left * W_L_0_mid * W_L_0_right;
+          W_L_0(col_ind,col_ind) = W_L_0_temp(0,0);
+          
+          
+          //Find W_1
+          W_L_1 = W_L_tild;
+          //subset matrix
+          sub_ct_i= 0;
+          for(int w_1_ct_i =0; w_1_ct_i<p_L; w_1_ct_i++){
+            if(w_1_ct_i != row_ind & w_1_ct_i != col_ind){
+              //subset w_1_left
+              W_L_1_left(0,sub_ct_i) = W_L_tild(row_ind,w_1_ct_i);
+              W_L_1_left(1,sub_ct_i) = W_L_tild(col_ind,w_1_ct_i);
+              
+              //subset w_1_right
+              W_L_1_right(sub_ct_i,0) = W_L_tild(w_1_ct_i,row_ind);
+              W_L_1_right(sub_ct_i,1) = W_L_tild(w_1_ct_i,col_ind);
+              
+              //subset w_1_mid
+              sub_ct_ii = 0;
+              for(int w_1_ct_ii=0; w_1_ct_ii<p_L; w_1_ct_ii++){
+                if(w_1_ct_ii != row_ind & w_1_ct_ii != col_ind){
+                  W_L_1_mid(sub_ct_i,sub_ct_ii) = W_L_tild(w_1_ct_i, w_1_ct_ii);
+                  sub_ct_ii += 1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_1_mid = arma::inv(W_L_1_mid);
+          //Compute matrix and enter into W_1
+          W_L_1_temp = W_L_1_left * W_L_1_mid * W_L_1_right;
+          W_L_1(row_ind,row_ind) = W_L_1_temp(0,0);
+          W_L_1(row_ind,col_ind) = W_L_1_temp(0,1);
+          W_L_1(col_ind,row_ind) = W_L_1_temp(1,0);
+          W_L_1(col_ind,col_ind) = W_L_1_temp(1,1);
+          
+          //add denominator value
+          prob = prob - 0.5*(log(M_L(col_ind,col_ind)) - log_2pi - log(W_L_tild(row_ind,row_ind) - W_L_1(row_ind,row_ind))) - 0.5*(arma::trace(M_L*(W_L_0-W_L_1)) - (M_L(row_ind,row_ind) - M_L(row_ind,col_ind)*M_L(row_ind,col_ind)/M_L(col_ind,col_ind))*(W_L(row_ind,row_ind) - W_L_1(row_ind,row_ind)));
+          
+          
+          //add graph-prior values
+          prob = prob + log(1-g_prior) - log(g_prior);
+          
+          //set the rate as the minimum of {1,prob} (NB everything on log-scale)
+          if(prob < 0){
+            rates_L[rate_ct] = prob;
+          } else {
+            rates_L[rate_ct] = 0;
+          }
+          
+        } else { //If the edge doesn't exist, find the birth rate
+          //Find indices
+          row_ind = upper_coord_L(rate_ct,0);
+          col_ind = upper_coord_L(rate_ct,1);
+          
+          //Numerator
+          
+          //Find W_0
+          W_L_0 = W_L;
+          //Set covariance (i,j) and (j,i) equal to 0
+          W_L_0(row_ind,col_ind) = 0;
+          W_L_0(col_ind,row_ind) = 0;
+          //Find variance for (j,j)
+          //Subset matrix
+          sub_ct_i = 0;
+          for(int w_0_ct=0; w_0_ct < p_L; w_0_ct++){
+            if(w_0_ct != col_ind){
+              //find the left vector
+              W_L_0_left(0,sub_ct_i) = W_L(col_ind, w_0_ct);
+              //find the right vector
+              W_L_0_right(sub_ct_i,0) = W_L(w_0_ct,col_ind);
+              
+              //find the middle matrix
+              sub_ct_ii =0;
+              for(int w_0_ct_ii=0; w_0_ct_ii<p_L; w_0_ct_ii++){
+                if(w_0_ct_ii != col_ind){
+                  W_L_0_mid(sub_ct_i,sub_ct_ii) = W_L(w_0_ct,w_0_ct_ii);
+                  sub_ct_ii +=1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_0_mid = arma::inv(W_L_0_mid);
+          //compute variance and enter into W_0
+          W_L_0_temp = W_L_0_left * W_L_0_mid * W_L_0_right;
+          W_L_0(col_ind,col_ind) = W_L_0_temp(0,0);
+          
+          
+          //Find W_1
+          W_L_1 = W_L;
+          //subset matrix
+          sub_ct_i= 0;
+          for(int w_1_ct_i =0; w_1_ct_i<p_L; w_1_ct_i++){
+            if(w_1_ct_i != row_ind & w_1_ct_i != col_ind){
+              //subset w_1_left
+              W_L_1_left(0,sub_ct_i) = W_L(row_ind,w_1_ct_i);
+              W_L_1_left(1,sub_ct_i) = W_L(col_ind,w_1_ct_i);
+              
+              //subset w_1_right
+              W_L_1_right(sub_ct_i,0) = W_L(w_1_ct_i,row_ind);
+              W_L_1_right(sub_ct_i,1) = W_L(w_1_ct_i,col_ind);
+              
+              //subset w_1_mid
+              sub_ct_ii = 0;
+              for(int w_1_ct_ii=0; w_1_ct_ii<p_L; w_1_ct_ii++){
+                if(w_1_ct_ii != row_ind & w_1_ct_ii != col_ind){
+                  W_L_1_mid(sub_ct_i,sub_ct_ii) = W_L(w_1_ct_i, w_1_ct_ii);
+                  sub_ct_ii += 1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_1_mid = arma::inv(W_L_1_mid);
+          //Compute matrix and enter into W_1
+          W_L_1_temp = W_L_1_left * W_L_1_mid * W_L_1_right;
+          W_L_1(row_ind,row_ind) = W_L_1_temp(0,0);
+          W_L_1(row_ind,col_ind) = W_L_1_temp(0,1);
+          W_L_1(col_ind,row_ind) = W_L_1_temp(1,0);
+          W_L_1(col_ind,col_ind) = W_L_1_temp(1,1);
+          
+          //Find numerator probability
+          prob = 0.5*(log_2pi + log(W_L(row_ind,row_ind) - W_L_1(row_ind,row_ind)) - log(M_L_star(col_ind,col_ind))) - 0.5*(arma::trace(M_L_star*(W_L_1-W_L_0)) - (M_L_star(row_ind,row_ind) - M_L_star(row_ind,col_ind)*M_L_star(row_ind,col_ind)/M_L_star(col_ind,col_ind))*(W_L_1(row_ind,row_ind) - W_L(row_ind,row_ind)));
+          
+          //Find denominator
+          
+          //Draw matrix from prior
+          W_L_tild_temp = f_gwish(G_L,a_L*(p_L+2),M_L);
+          for(int w_ct_i=0; w_ct_i<p_L; w_ct_i++){
+            for(int w_ct_ii=0; w_ct_ii<p_L; w_ct_ii++){
+              W_L_tild(w_ct_i,w_ct_ii) = W_L_tild_temp(w_ct_i,w_ct_ii);
+            }
+          }
+          
+          //Find W_0
+          W_L_0 = W_L_tild;
+          //Set covariance (i,j) and (j,i) equal to 0
+          W_L_0(row_ind,col_ind) = 0;
+          W_L_0(col_ind,row_ind) = 0;
+          //Find variance for (j,j)
+          //Subset matrix
+          sub_ct_i = 0;
+          for(int w_0_ct=0; w_0_ct < p_L; w_0_ct++){
+            if(w_0_ct != col_ind){
+              //find the left vector
+              W_L_0_left(0,sub_ct_i) = W_L_tild(col_ind, w_0_ct);
+              //find the right vector
+              W_L_0_right(sub_ct_i,0) = W_L_tild(w_0_ct,col_ind);
+              
+              //find the middle matrix
+              sub_ct_ii =0;
+              for(int w_0_ct_ii=0; w_0_ct_ii<p_L; w_0_ct_ii++){
+                if(w_0_ct_ii != col_ind){
+                  W_L_0_mid(sub_ct_i,sub_ct_ii) = W_L_tild(w_0_ct,w_0_ct_ii);
+                  sub_ct_ii +=1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_0_mid = arma::inv(W_L_0_mid);
+          //compute variance and enter into W_0
+          W_L_0_temp = W_L_0_left * W_L_0_mid * W_L_0_right;
+          W_L_0(col_ind,col_ind) = W_L_0_temp(0,0);
+          
+          
+          //Find W_1
+          W_L_1 = W_L_tild;
+          //subset matrix
+          sub_ct_i= 0;
+          for(int w_1_ct_i =0; w_1_ct_i<p_L; w_1_ct_i++){
+            if(w_1_ct_i != row_ind & w_1_ct_i != col_ind){
+              //subset w_1_left
+              W_L_1_left(0,sub_ct_i) = W_L_tild(row_ind,w_1_ct_i);
+              W_L_1_left(1,sub_ct_i) = W_L_tild(col_ind,w_1_ct_i);
+              
+              //subset w_1_right
+              W_L_1_right(sub_ct_i,0) = W_L_tild(w_1_ct_i,row_ind);
+              W_L_1_right(sub_ct_i,1) = W_L_tild(w_1_ct_i,col_ind);
+              
+              //subset w_1_mid
+              sub_ct_ii = 0;
+              for(int w_1_ct_ii=0; w_1_ct_ii<p_L; w_1_ct_ii++){
+                if(w_1_ct_ii != row_ind & w_1_ct_ii != col_ind){
+                  W_L_1_mid(sub_ct_i,sub_ct_ii) = W_L_tild(w_1_ct_i, w_1_ct_ii);
+                  sub_ct_ii += 1;
+                }
+              }
+              
+              sub_ct_i += 1;
+            }
+          }
+          W_L_1_mid = arma::inv(W_L_1_mid);
+          //Compute matrix and enter into W_1
+          W_L_1_temp = W_L_1_left * W_L_1_mid * W_L_1_right;
+          W_L_1(row_ind,row_ind) = W_L_1_temp(0,0);
+          W_L_1(row_ind,col_ind) = W_L_1_temp(0,1);
+          W_L_1(col_ind,row_ind) = W_L_1_temp(1,0);
+          W_L_1(col_ind,col_ind) = W_L_1_temp(1,1);
+          
+          //Add denominator value
+          prob = prob - 0.5*(log_2pi + log(W_L_tild(row_ind,row_ind) - W_L_1(row_ind,row_ind)) - log(M_L(col_ind,col_ind))) - 0.5*(arma::trace(M_L*(W_L_1-W_L_0)) - (M_L(row_ind,row_ind) - M_L(row_ind,col_ind)*M_L(row_ind,col_ind)/M_L(col_ind,col_ind))*(W_L_1(row_ind,row_ind) - W_L_tild(row_ind,row_ind)));
+          
+          //Add graph prior values
+          prob = prob + log(g_prior) - log(1-g_prior);
+          
+          //set the rate as the minimum of {1,prob} (NB everything on log-scale)
+          if(prob < 0){
+            rates_L[rate_ct] = prob;
+          } else {
+            rates_L[rate_ct] = 0;
+          }
+          
+        }
+        
+      } //end rate loop
+      
+      //Calculate waiting times
+      waiting_time_L = sum(exp(rates_L));
+      //convert rates into a probability vector
+      //first find the maximum
+      max = -pow(10,20);
+      for(int max_ct=0; max_ct<num_upptri_L; max_ct++){
+        if (rates_L[max_ct]>max){
+          max = rates_L[max_ct];
+        }
+      }
+      //find probability vector
+      probs_rate_L = exp(rates_L - max)/sum(exp(rates_L-max));
+      //select an edge based off a multinomial draw
+      selected_edge = sim_mult(probs_rate_L); //Need to readjust types of vector
+      
+      //Change graph based on selected edge
+      if(exist_ind_L[selected_edge]>0){ //If the edge is going to die
+        //Change selected edge to 0
+        G_L(upper_coord_L(selected_edge,0),upper_coord_L(selected_edge,1)) = 0;
+        //Change existence indicator to 0
+        exist_ind_L[selected_edge] = 0;
+      } else { //If the edge is going to be born
+        //Change selected edge to 1
+        G_L(upper_coord_L(selected_edge,0),upper_coord_L(selected_edge,1)) = 1;
+        //Change existence indicator to 1
+        exist_ind_L[selected_edge] = 1;
+      }
+      
+      ///////////
+      // W_L_ppk //
+      ///////////
+      W_L_temp = f_gwish(G_L,m_L_star,M_L_star);
+      for(int w_ct_i=0; w_ct_i<p_L; w_ct_i++){
+        for(int w_ct_ii=0; w_ct_ii<p_L; w_ct_ii++){
+          W_L(w_ct_i,w_ct_ii) = W_L_temp(w_ct_i,w_ct_ii);
+        }
+      }
+      
+      Sigma_L = arma::inv(W_L);
       
       
       ///////////
@@ -2077,9 +2499,10 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
       W = arma::inv(Sigma);
       W = arma::symmatu(W);
       W_ppk.slice(k) = W;
-      gwish_k[k] = gwish_out;
-      
-      
+      G_L_ppk.slice(k) = G_L;
+      exist_ind_L_tk.col(k) = exist_ind_L;
+      rates_L_tk.col(k) = rates_L;
+      waiting_times_L_k[k] = waiting_time_L;
     }
     
     /////////////////////////
@@ -2174,11 +2597,9 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
         for(int k=0; k<K; k++){
           // int k = 0;
           Sigma = Sigma_ppk.slice(k);
-          W = W_ppk.slice(k);
           mu = mu_pk.col(k);
-          v = v_pdk.slice(k);
           psi = psi_pdk.slice(k);
-          kappa = kappa_pdk.slice(k);
+          exist_ind_L = exist_ind_L_tk.col(k);
           
           
           ////////////////
@@ -2202,6 +2623,13 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
           temp_sig.row(it) = Sigma;
           Sigma_chain_k_ipp[k] = temp_sig;
           
+          //////////////////////
+          // Record exist_ind //
+          /////////////////////
+          arma::mat temp_exist = chain_existind_L_itk.slice(k);
+          temp_exist.row(it) = trans(exist_ind_L);
+          chain_existind_L_itk.slice(k) = temp_exist;
+          
         }
         
         if(it % 10 ==0){
@@ -2222,7 +2650,8 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
     
   }
   
-  results[4] = nc_dnt;
+  results[5] = nc_dnt;
+  results[4] = chain_existind_L_itk;
   results[3] = chain_phi_dki;
   results[2] = psi_chain_k_ipd;
   results[1] = mu_chain_k_ip;

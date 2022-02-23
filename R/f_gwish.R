@@ -1,16 +1,14 @@
 #' Calls a G-Wishart sampler
 #'
-#' This functions takes a matrix X and returns a draw from a G-wishart prior in graph form.
+#' This functions takes an adjaceny matrix G, a degree of freedom m, and a scale matrix M, and returns a draw form a W_G(m,M) distribution
 #'
-#' @param X The data input matrix (D by p)
-#' @return One draw of a full conditional from a G-wishart prior in list form
+#' @param G An upper-triangular adjaceny matrix
+#' @param m The degree of freedom in  a G-Wishart distribution
+#' @param M The scale matrix in a G-Wishart distribution
+#' @return One draw from a W_G(m,M) distribution
 #' @export
 
-
-#find gwish_out
-f_gwish = function(X,dfprior){
-  sink(tempfile()) 
-  on.exit(sink()) 
-  out = invisible(force(BDgraph::bdgraph(data = X,  iter = 20, burnin = 0, df.prior = dfprior))) 
-  return(out)
+#Draw from an exact g-wishart sampler
+f_gwish = function(G,m,M){
+  return(BDgraph::rgwish(n = 1, adj = G, b = m, D = M))
 }

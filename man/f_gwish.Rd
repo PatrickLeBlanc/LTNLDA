@@ -4,14 +4,18 @@
 \alias{f_gwish}
 \title{Calls a G-Wishart sampler}
 \usage{
-f_gwish(X, dfprior)
+f_gwish(G, m, M)
 }
 \arguments{
-\item{X}{The data input matrix (D by p)}
+\item{G}{An upper-triangular adjaceny matrix}
+
+\item{m}{The degree of freedom in  a G-Wishart distribution}
+
+\item{M}{The scale matrix in a G-Wishart distribution}
 }
 \value{
-One draw of a full conditional from a G-wishart prior in list form
+One draw from a W_G(m,M) distribution
 }
 \description{
-This functions takes a matrix X and returns a draw from a G-wishart prior in graph form.
+This functions takes an adjaceny matrix G, a degree of freedom m, and a scale matrix M, and returns a draw form a W_G(m,M) distribution
 }

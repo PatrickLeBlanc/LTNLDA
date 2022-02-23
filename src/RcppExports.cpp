@@ -205,18 +205,23 @@ BEGIN_RCPP
 END_RCPP
 }
 // LTN_Gibbs_cov_gwish_C
-List LTN_Gibbs_cov_gwish_C(List& results, Function f_pg, Function f_iwish, Function f_gwish_cont, List& gwish_k, arma::cube& Sigma_ppk, arma::cube& W_ppk, arma::mat& mu_pk, arma::cube& v_pdk, arma::cube& psi_pdk, arma::cube& kappa_pdk, arma::cube& theta_kda, arma::cube& beta_kdv, arma::mat& Lambda_inv, arma::vec& U_nodes, double& a_U, double& b_U, arma::mat& Phi_U, arma::vec& L_nodes, double& a_L, double& b_L, arma::mat& Phi_L, arma::cube& chain_phi_dki, List& psi_chain_k_ipd, List& mu_chain_k_ip, List& Sigma_chain_k_ipp, arma::cube& nc_dnt, arma::mat& dt, arma::mat& descendants_mat, List& ta, List& docs, List& ancestors, arma::vec& internal_nodes, List& leaf_success, List& leaf_failures, int& K, int& p, int& p_U, int& p_L, int& D, int& V, double& alpha, int& iterations, int& warmup, int& thin);
-RcppExport SEXP _LTNLDA_LTN_Gibbs_cov_gwish_C(SEXP resultsSEXP, SEXP f_pgSEXP, SEXP f_iwishSEXP, SEXP f_gwish_contSEXP, SEXP gwish_kSEXP, SEXP Sigma_ppkSEXP, SEXP W_ppkSEXP, SEXP mu_pkSEXP, SEXP v_pdkSEXP, SEXP psi_pdkSEXP, SEXP kappa_pdkSEXP, SEXP theta_kdaSEXP, SEXP beta_kdvSEXP, SEXP Lambda_invSEXP, SEXP U_nodesSEXP, SEXP a_USEXP, SEXP b_USEXP, SEXP Phi_USEXP, SEXP L_nodesSEXP, SEXP a_LSEXP, SEXP b_LSEXP, SEXP Phi_LSEXP, SEXP chain_phi_dkiSEXP, SEXP psi_chain_k_ipdSEXP, SEXP mu_chain_k_ipSEXP, SEXP Sigma_chain_k_ippSEXP, SEXP nc_dntSEXP, SEXP dtSEXP, SEXP descendants_matSEXP, SEXP taSEXP, SEXP docsSEXP, SEXP ancestorsSEXP, SEXP internal_nodesSEXP, SEXP leaf_successSEXP, SEXP leaf_failuresSEXP, SEXP KSEXP, SEXP pSEXP, SEXP p_USEXP, SEXP p_LSEXP, SEXP DSEXP, SEXP VSEXP, SEXP alphaSEXP, SEXP iterationsSEXP, SEXP warmupSEXP, SEXP thinSEXP) {
+List LTN_Gibbs_cov_gwish_C(List& results, Function f_pg, Function f_iwish, Function f_gwish, arma::cube& Sigma_ppk, arma::cube& W_ppk, arma::cube& G_L_ppk, double& g_prior, arma::mat& upper_coord_L, arma::mat& exist_ind_L_tk, arma::mat& rates_L_tk, arma::vec& waiting_times_L_k, arma::mat& mu_pk, arma::cube& v_pdk, arma::cube& psi_pdk, arma::cube& kappa_pdk, arma::cube& theta_kda, arma::cube& beta_kdv, arma::mat& Lambda_inv, arma::vec& U_nodes, double& a_U, double& b_U, arma::mat& Phi_U, arma::vec& L_nodes, double& a_L, double& b_L, arma::mat& Phi_L, arma::cube& chain_phi_dki, List& psi_chain_k_ipd, List& mu_chain_k_ip, List& Sigma_chain_k_ipp, arma::cube& chain_existind_L_itk, arma::cube& nc_dnt, arma::mat& dt, arma::mat& descendants_mat, List& ta, List& docs, List& ancestors, arma::vec& internal_nodes, List& leaf_success, List& leaf_failures, int& K, int& p, int& p_U, int& p_L, int& num_upptri_L, int& D, int& V, double& alpha, int& iterations, int& warmup, int& thin);
+RcppExport SEXP _LTNLDA_LTN_Gibbs_cov_gwish_C(SEXP resultsSEXP, SEXP f_pgSEXP, SEXP f_iwishSEXP, SEXP f_gwishSEXP, SEXP Sigma_ppkSEXP, SEXP W_ppkSEXP, SEXP G_L_ppkSEXP, SEXP g_priorSEXP, SEXP upper_coord_LSEXP, SEXP exist_ind_L_tkSEXP, SEXP rates_L_tkSEXP, SEXP waiting_times_L_kSEXP, SEXP mu_pkSEXP, SEXP v_pdkSEXP, SEXP psi_pdkSEXP, SEXP kappa_pdkSEXP, SEXP theta_kdaSEXP, SEXP beta_kdvSEXP, SEXP Lambda_invSEXP, SEXP U_nodesSEXP, SEXP a_USEXP, SEXP b_USEXP, SEXP Phi_USEXP, SEXP L_nodesSEXP, SEXP a_LSEXP, SEXP b_LSEXP, SEXP Phi_LSEXP, SEXP chain_phi_dkiSEXP, SEXP psi_chain_k_ipdSEXP, SEXP mu_chain_k_ipSEXP, SEXP Sigma_chain_k_ippSEXP, SEXP chain_existind_L_itkSEXP, SEXP nc_dntSEXP, SEXP dtSEXP, SEXP descendants_matSEXP, SEXP taSEXP, SEXP docsSEXP, SEXP ancestorsSEXP, SEXP internal_nodesSEXP, SEXP leaf_successSEXP, SEXP leaf_failuresSEXP, SEXP KSEXP, SEXP pSEXP, SEXP p_USEXP, SEXP p_LSEXP, SEXP num_upptri_LSEXP, SEXP DSEXP, SEXP VSEXP, SEXP alphaSEXP, SEXP iterationsSEXP, SEXP warmupSEXP, SEXP thinSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List& >::type results(resultsSEXP);
     Rcpp::traits::input_parameter< Function >::type f_pg(f_pgSEXP);
     Rcpp::traits::input_parameter< Function >::type f_iwish(f_iwishSEXP);
-    Rcpp::traits::input_parameter< Function >::type f_gwish_cont(f_gwish_contSEXP);
-    Rcpp::traits::input_parameter< List& >::type gwish_k(gwish_kSEXP);
+    Rcpp::traits::input_parameter< Function >::type f_gwish(f_gwishSEXP);
     Rcpp::traits::input_parameter< arma::cube& >::type Sigma_ppk(Sigma_ppkSEXP);
     Rcpp::traits::input_parameter< arma::cube& >::type W_ppk(W_ppkSEXP);
+    Rcpp::traits::input_parameter< arma::cube& >::type G_L_ppk(G_L_ppkSEXP);
+    Rcpp::traits::input_parameter< double& >::type g_prior(g_priorSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type upper_coord_L(upper_coord_LSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type exist_ind_L_tk(exist_ind_L_tkSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type rates_L_tk(rates_L_tkSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type waiting_times_L_k(waiting_times_L_kSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type mu_pk(mu_pkSEXP);
     Rcpp::traits::input_parameter< arma::cube& >::type v_pdk(v_pdkSEXP);
     Rcpp::traits::input_parameter< arma::cube& >::type psi_pdk(psi_pdkSEXP);
@@ -236,6 +241,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List& >::type psi_chain_k_ipd(psi_chain_k_ipdSEXP);
     Rcpp::traits::input_parameter< List& >::type mu_chain_k_ip(mu_chain_k_ipSEXP);
     Rcpp::traits::input_parameter< List& >::type Sigma_chain_k_ipp(Sigma_chain_k_ippSEXP);
+    Rcpp::traits::input_parameter< arma::cube& >::type chain_existind_L_itk(chain_existind_L_itkSEXP);
     Rcpp::traits::input_parameter< arma::cube& >::type nc_dnt(nc_dntSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type dt(dtSEXP);
     Rcpp::traits::input_parameter< arma::mat& >::type descendants_mat(descendants_matSEXP);
@@ -249,13 +255,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int& >::type p(pSEXP);
     Rcpp::traits::input_parameter< int& >::type p_U(p_USEXP);
     Rcpp::traits::input_parameter< int& >::type p_L(p_LSEXP);
+    Rcpp::traits::input_parameter< int& >::type num_upptri_L(num_upptri_LSEXP);
     Rcpp::traits::input_parameter< int& >::type D(DSEXP);
     Rcpp::traits::input_parameter< int& >::type V(VSEXP);
     Rcpp::traits::input_parameter< double& >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< int& >::type iterations(iterationsSEXP);
     Rcpp::traits::input_parameter< int& >::type warmup(warmupSEXP);
     Rcpp::traits::input_parameter< int& >::type thin(thinSEXP);
-    rcpp_result_gen = Rcpp::wrap(LTN_Gibbs_cov_gwish_C(results, f_pg, f_iwish, f_gwish_cont, gwish_k, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes, a_U, b_U, Phi_U, L_nodes, a_L, b_L, Phi_L, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, p_U, p_L, D, V, alpha, iterations, warmup, thin));
+    rcpp_result_gen = Rcpp::wrap(LTN_Gibbs_cov_gwish_C(results, f_pg, f_iwish, f_gwish, Sigma_ppk, W_ppk, G_L_ppk, g_prior, upper_coord_L, exist_ind_L_tk, rates_L_tk, waiting_times_L_k, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes, a_U, b_U, Phi_U, L_nodes, a_L, b_L, Phi_L, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, chain_existind_L_itk, nc_dnt, dt, descendants_mat, ta, docs, ancestors, internal_nodes, leaf_success, leaf_failures, K, p, p_U, p_L, num_upptri_L, D, V, alpha, iterations, warmup, thin));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -265,7 +272,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_LTNLDA_LTN_Gibbs_cov_C", (DL_FUNC) &_LTNLDA_LTN_Gibbs_cov_C, 43},
     {"_LTNLDA_LTN_Gibbs_cov_block_C", (DL_FUNC) &_LTNLDA_LTN_Gibbs_cov_block_C, 47},
     {"_LTNLDA_LTN_Gibbs_Perp_C", (DL_FUNC) &_LTNLDA_LTN_Gibbs_Perp_C, 29},
-    {"_LTNLDA_LTN_Gibbs_cov_gwish_C", (DL_FUNC) &_LTNLDA_LTN_Gibbs_cov_gwish_C, 45},
+    {"_LTNLDA_LTN_Gibbs_cov_gwish_C", (DL_FUNC) &_LTNLDA_LTN_Gibbs_cov_gwish_C, 52},
     {NULL, NULL, 0}
 };
 
