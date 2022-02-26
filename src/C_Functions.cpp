@@ -1829,7 +1829,7 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_gwish,
   
   //Iterate constructs
   int it = 0;
-  int n_it = iterations + warmup;
+  int n_it = thin*iterations + warmup;
   
   
   for(int iterate =0; iterate < n_it; iterate++){
