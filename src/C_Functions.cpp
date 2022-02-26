@@ -1743,14 +1743,14 @@ List LTN_Gibbs_Perp_C(List &results, Function f_pg,
 }
 
 // [[Rcpp::export]]
-List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Function f_gwish,
+List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_gwish,
                      arma::cube &Sigma_ppk, arma::cube &W_ppk, arma::cube &G_L_ppk, double &g_prior,
                      arma::mat &upper_coord_L, arma::mat &exist_ind_L_tk, arma::mat &rates_L_tk, arma::vec &waiting_times_L_k,
                      arma::mat &mu_pk, 
                      arma::cube &v_pdk, arma::cube &psi_pdk, arma::cube &kappa_pdk,
                      arma::cube &theta_kda, arma::cube &beta_kdv, 
                      arma::mat &Lambda_inv,
-                     arma::vec &U_nodes, double &a_U, double &b_U, arma::mat &Phi_U,
+                     arma::vec &U_nodes, double &a_U, double &b_U, arma::mat &Phi_U, double &gam_rate, double &gam_shape,
                      arma::vec &L_nodes, double &a_L, double &b_L, arma::mat &Phi_L,
                      arma::cube &chain_phi_dki, List &psi_chain_k_ipd, List &mu_chain_k_ip, List &Sigma_chain_k_ipp, arma::cube &chain_existind_L_itk,
                      arma::cube &nc_dnt, arma::mat &dt, 
@@ -1781,10 +1781,7 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
   arma::vec mu_mean(p);
   arma::mat draw(p,1);
   
-  NumericMatrix Sigma_U(p_U,p_U);
-  arma::mat Sigma_U_mat(p_U,p_U);
-  arma::mat psi_U_pd(p_U,D);
-  arma::vec mu_U(p_U);
+  arma::mat Sigma_U(p_U,p_U);
   
   arma::mat psi_L_pd(p_L,D);
   arma::vec mu_L(p_L);
@@ -2040,21 +2037,18 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_iwish, Funct
       // Sigma_U //
       /////////////
       
-      //Find psi_U and mu_U
-      for(int sig_U_node = 0; sig_U_node<p_U; sig_U_node++){
-        psi_U_pd.row(sig_U_node) = psi.row(U_nodes[sig_U_node]);
-        mu_U[sig_U_node] = mu[U_nodes[sig_U_node]];
+      Sigma_U = Sigma_U.zeros();
+      for(int sig_u_a=0; sig_u_a<p_U; sig_u_a++){
+        
+        double Sigma_U_sum = 0;
+        for(int sig_u_d=0; sig_u_d<D; sig_u_d++){
+          Sigma_U_sum += pow(psi(U_nodes[sig_u_a],sig_u_d) - mu[U_nodes[sig_u_a]],2);
+        }
+        
+        arma::vec tau_U_draw = Rcpp::rgamma(1,gam_shape + D/2, 2/(2*gam_rate + Sigma_U_sum));
+        Sigma_U(sig_u_a,sig_u_a) = 1/tau_U_draw[0];
       }
-      
-      //Find matrix for posterior
-      Sigma_U_mat = Sigma_U_mat.zeros();
-      for(int sig_d = 0; sig_d<D; sig_d++){
-        Sigma_U_mat += (psi_U_pd.col(sig_d) - mu_U) * trans(psi_U_pd.col(sig_d) - mu_U);
-      }
-      
-      //Draw matrix 
-      //NB not an arma --- have to switch if we wish to parallelize this, but its not a bottleneck
-      Sigma_U = f_iwish(D + a_U*(p_U+2),Sigma_U_mat + b_U*Phi_U);
+      Sigma_U = arma::symmatu(Sigma_U);
       
       /////////////
       // Sigma_L //
