@@ -1750,7 +1750,7 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_gwish,
                      arma::cube &v_pdk, arma::cube &psi_pdk, arma::cube &kappa_pdk,
                      arma::cube &theta_kda, arma::cube &beta_kdv, 
                      arma::mat &Lambda_inv,
-                     arma::vec &U_nodes, double &a_U, double &b_U, arma::mat &Phi_U, double &gam_rate, double &gam_shape,
+                     arma::vec &U_nodes, double &a_U, double &b_U, arma::mat &Phi_U,
                      arma::vec &L_nodes, double &a_L, double &b_L, arma::mat &Phi_L,
                      arma::cube &chain_phi_dki, List &psi_chain_k_ipd, List &mu_chain_k_ip, List &Sigma_chain_k_ipp, arma::cube &chain_existind_L_itk,
                      arma::cube &nc_dnt, arma::mat &dt, 
@@ -2045,7 +2045,7 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_gwish,
           Sigma_U_sum += pow(psi(U_nodes[sig_u_a],sig_u_d) - mu[U_nodes[sig_u_a]],2);
         }
         
-        arma::vec tau_U_draw = Rcpp::rgamma(1,gam_shape + D/2, 2/(2*gam_rate + Sigma_U_sum));
+        arma::vec tau_U_draw = Rcpp::rgamma(1,a_U + D/2, 2/(2*b_U + Sigma_U_sum));
         Sigma_U(sig_u_a,sig_u_a) = 1/tau_U_draw[0];
       }
       Sigma_U = arma::symmatu(Sigma_U);
