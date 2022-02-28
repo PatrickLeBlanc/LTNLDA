@@ -2,23 +2,25 @@
 #'
 #' This function takes a phyloseq object and the modelled number of subcommunities as inputs. It runs a collapsed blocked Gibbs sampler for LTNLDA, and returns a list containing posterior mean estimates for some parameters, Markov Chains for all meaningful parameters, and the phyloseq object.  For a detailed example see the vignette "LTN-LDA".
 #'
-#' @param ps A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.
+#' @param ps A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.  Further, the otu_table(ps) should have taxa corresponding to rows adn samples corresponding to columns.
 #' @param K An integer specifying the number of modeled subcommunities.
 #' @param C An integer specifying the threshold controlling cross-sample heterogeneity.  The default value is 5.  Using the default value may result in unreliable inference.
 #' @param iterations The number of iterations to record.  Default value is 1000.
 #' @param burnin The number of burnin iterations to run before recording values.  The default value is 10000.
 #' @param thin The amount by which we thin the chain.  A value of X means that 1 every X values is recorded after the burnin.  The default value is 10.
 #' @param alpha A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.
-#' @param a_L A double which is multipled by the scale matrix in the Inverse Wishart prior for the lower covariance matrix.  The default value is 10.
-#' @param b_L A double which is multipled by the degrees of freedom in the Inverse Wishart prior for the lower covariance matrix.  The default value is 50.
-#' @param a_U A double which is multipled by the scale matrix in the Inverse Wishart prior for the upeer covariance matrix.  The default value is 10^4.
-#' @param b_U A double which is multipled by the degrees of freedom in the Inverse Wishart prior for the upper covariance matrix.  The default value is 10.
+#' @param a_U A double controlling the scale parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10^4.
+#' @param b_U A double controlling the rate parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10.
+#' @param a_L A double such that the degrees of freedom for the G-Wishart prior for the lower precision matrix is a_L(p_L+2).  The default value is 5.
+#' @param b_L A double such that the scale matrix for the G-Wishart prior for the lower precision matrix is b_L(p+2)diag(p_L.  The default value is 5.
+#' @param g_prior A double specifying the prior probability that there is an edge between two nodes in the lower covariance matrix.  The default value is 1/4.
 #' @param Lambda A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) where V is the number of leaves.
 #' @return 
 #' A list with 8 entries.  
 #' Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. 
 #' Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}.
 #' Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. 
+#' Mean_Post_G_L contains the posterior mean of the edge matrix denoting the probability edges are conditionally dependent for each subcomunity.
 #' Chain_Phi contains the Markov Chains for the phi_d. 
 #' Chain_Psi contains the Markov Chains for the psi_{p,d,k}. 
 #' Chain_Mu contains the Markov Chains for the mu_k. 
@@ -35,7 +37,8 @@
 
 LTNLDA_cov = function(ps, K, C = 5,
                   iterations = 1000, burnin = 10000, thin = 10,
-                  alpha = 1, a_L = 10, b_L = 50, a_U = 10^4, b_U = 10, 
+                  alpha = 1, a_L = 5, b_L = 5, a_U = 10^4, b_U = 10, 
+                  g_prior = 1/4,
                   Lambda = NULL){
   
   #check inputs to see if they have been specified or not
@@ -259,10 +262,14 @@ LTNLDA_cov = function(ps, K, C = 5,
       Phi_U = diag(p_U)
       Phi_L = diag(p_L)
       
+      #scale hyperprior for b_L
+      b_L = (p_L+2)*b_L
+      
       #check if Lambda has been specified --- if not, specify as identity matrix
       if(is.null(Lambda)){
         Lambda = diag(p)
       }
+      
       
       #######################################################
       # Convert dtm count data to list of vectors of tokens #
@@ -418,15 +425,61 @@ LTNLDA_cov = function(ps, K, C = 5,
       
       #initialize covariance matrices Sigma_ppk from the prior parameers
       #have to initialize upper and lower matrices first
-      #Sigma_U_ppk[,,k] is the upper covariance matrix associated with subcommunity k
+      #Sigma_U_ppk[,,k] is the (diagonal) upper covariance matrix associated with subcommunity k
       Sigma_U_ppk = array(0,dim=c(p_U,p_U,K))
       for(k in 1:K){
-        Sigma_U_ppk[,,k] = MCMCpack::riwish(a_U*(p_U+2),b_U*(Phi_U))
+        for(a in 1:p_U){
+          Sigma_U_ppk[a,a,k] =  1/rgamma(1,shape = a_U,rate = b_U)
+        }
+      }
+      #Initialize the graph matrix at random from the specifiedp rior
+      #G_L_ppk[,,k] contains the 
+      G_L_ppk = array(0,dim=c(p_L,p_L,K))
+      #make data structures to store coordinates of existing/nonexisting edges
+      #find the number of possible edges
+      num_upptri_L = p_L*(p_L-1)/2
+      #re-index the edges according to 1:num_upptri_L and find/store the coordinates
+      upper_coord_L = matrix(0,nrow = num_upptri_L,ncol=2)
+      upper_coord_L_C = matrix(0,nrow = num_upptri_L,ncol=2)
+      #exist_ind_L_tk[t,k] records whether edge t in subcommunity k is a 0 or a 1
+      exist_ind_L_tk = matrix(0,nrow = num_upptri_L,ncol = K)
+      #rates_L_tk[t,k] records the birth/death rate for edge t in subcommunity k
+      rates_L_tk = matrix(0,nrow = num_upptri_L,ncol = K)
+      for(k in 1:K){
+        coord_ct = 1
+        for(i in 1:(p_L-1)){
+          for(j in (i+1):p_L){
+            #initialize each edge at random
+            G_L_ppk[i,j,k] = sample(0:1,size = 1,prob = c(1-g_prior,g_prior))
+            
+            #Find the coordinates for edge coord_ct
+            upper_coord_L[coord_ct,1] = i
+            upper_coord_L[coord_ct,2] = j
+            
+            #record which edges exist
+            if(G_L_ppk[i,j,k]>0){
+              exist_ind_L_tk[coord_ct,k] = 1
+            }
+            
+            #iterate counter
+            coord_ct = coord_ct + 1
+          }
+        }
+        #the diagonal is all connected
+        diag(G_L_ppk[,,k]) = 1
+      }
+      upper_coord_L_C = upper_coord_L - 1
+      #waiting_times_L_k[k] records how long the graph in subcommunity k needs to wait before an edge is born/dies
+      waiting_times_L_k = rep(0,K)
+      #W_L_ppk[,,k] is the lower precision matrix associated with subcommunity k
+      W_L_ppk =  array(0,dim=c(p_L,p_L,K))
+      for(k in 1:K){
+        W_L_ppk[,,k] = f_gwish(G_L_ppk[,,k],a_L*(p_L+2),b_L*Phi_L)
       }
       #Sigma_L_ppk[,,k] is the lower covariance matrix associated with subcommunity k
       Sigma_L_ppk = array(0,dim=c(p_L,p_L,K))
       for(k in 1:K){
-        Sigma_L_ppk[,,k] = MCMCpack::riwish(a_L*(p_L+2),b_L*Phi_L)
+        Sigma_L_ppk[,,k] = solve(W_L_ppk[,,k])
       }
       #combine Sigma_k^L and Sigma_k_^U into Sigma_k
       #Sigma_ppk[,,k] is the covariance matrix associated with subcommunity k
@@ -439,12 +492,10 @@ LTNLDA_cov = function(ps, K, C = 5,
       #W_ppk[,,k] is the inverse of Sigma_ppk[,,k]
       W_ppk = array(0,dim=c(p,p,K))
       for(k in 1:K){
-        for(a in 1:p){
-          W_ppk[a,a,k] = 1/Sigma_ppk[a,a,k]
-        }
+        W_ppk[,,k] = solve(Sigma_ppk[,,k])
       }
       
-      #initialize ,eam vectors mu_pk from a N(0,I) distribution
+      #initialize mean vectors mu_pk from a N(0,I) distribution
       #mu_pk[p,k] is the mean log-odds for node p in subcommunity k
       mu_pk = matrix(0,nrow=p,ncol=K)
       for(k in 1:K){
@@ -456,6 +507,7 @@ LTNLDA_cov = function(ps, K, C = 5,
       
       #Pre-allocate chains
       chain_phi_dki = array(0,dim=c(D,K,iterations))
+      chain_existind_L_itk = array(0,dim = c(iterations,num_upptri_L,K))
       psi_chain_k_ipd = NULL
       mu_chain_k_ip = NULL
       Sigma_chain_k_ipp = NULL
@@ -466,23 +518,39 @@ LTNLDA_cov = function(ps, K, C = 5,
       }
       
       results = NULL
-      results[[5]] = nc_dnt
+      results[[6]] = nc_dnt
+      results[[5]] = chain_existind_L_itk
       results[[4]] = chain_phi_dki
       results[[3]] = psi_chain_k_ipd
       results[[2]] = mu_chain_k_ip
       results[[1]] = Sigma_chain_k_ipp
       
       cat("The burn-in period has begun. \n")
-      results = LTN_Gibbs_cov_C(results, f_pg, f_iwish, Sigma_ppk, W_ppk, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes_C, a_U, b_U, Phi_U, L_nodes_C, a_L, b_L, Phi_L, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, nc_dnt, dt, descendants_mat_C, ta_C, docs_C, ancestors_C, internal_nodes_C, leaf_success_C, leaf_failures_C, K, p, p_U, p_L, D, V, alpha, iterations, burnin, thin)
+      results = LTN_Gibbs_cov_gwish_C(results, f_pg, f_gwish, Sigma_ppk, W_ppk, G_L_ppk, g_prior, upper_coord_L_C, exist_ind_L_tk, rates_L_tk, waiting_times_L_k, mu_pk, v_pdk, psi_pdk, kappa_pdk, theta_kda, beta_kdv, Lambda_inv, U_nodes_C, a_U, b_U, Phi_U, L_nodes_C, a_L, b_L, Phi_L, chain_phi_dki, psi_chain_k_ipd, mu_chain_k_ip, Sigma_chain_k_ipp, chain_existind_L_itk, nc_dnt, dt, descendants_mat_C, ta_C, docs_C, ancestors_C, internal_nodes_C, leaf_success_C, leaf_failures_C, K, p, p_U, p_L, num_upptri_L, D, V, alpha, iterations, burnin, thin)
       cat("The Gibbs Sampler has completed. \n")
       
       #unpack the results
-      nc_dnt = results[[5]]
+      nc_dnt = results[[6]]
+      chain_existind_L_itk = results[[5]]
       chain_phi_dki = results[[4]]
       psi_chain_k_ipd = results[[3]]
       mu_chain_k_ip = results[[2]]
       Sigma_chain_k_ipp = results[[1]]
       
+      #find posterior mean for graph structure
+      post_existind_L_tk = matrix(0,nrow = num_upptri_L, ncol = K)
+      for(k in 1:K){
+        post_existind_L_tk[,k] = apply(chain_existind_L_itk[,,k],2,mean)
+      }
+      #convert from the vector format to a matrix format
+      post_G_L_ppk = array(0,dim = c(p_L,p_L,K))
+      for(k in 1:K){
+        diag(post_G_L_ppk[,,k]) = 1
+        for(i in 1:num_upptri_L){
+          post_G_L_ppk[upper_coord_L[i,1],upper_coord_L[i,2],k] = post_existind_L_tk[i,k]
+        }
+      }
+
       #find mean posterior psi_pdk        
       post_psi_pdk = array(0,dim=c(p,D,K))
       for(k in 1:K){
@@ -559,6 +627,7 @@ LTNLDA_cov = function(ps, K, C = 5,
       out = list(Mean_Post_Phi_d = post_phi_dk,
                  Mean_Post_Beta_kd = post_beta_kdv,
                  Mean_Post_Beta_k = post_beta_kv,
+                 Mean_Post_G_L = post_G_L_ppk,
                  Chain_Phi = chain_phi_dki,
                  Chain_Psi = psi_chain_k_ipd,
                  Chain_Mu = mu_chain_k_ip,

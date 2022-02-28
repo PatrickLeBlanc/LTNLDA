@@ -12,15 +12,16 @@ LTNLDA_cov(
   burnin = 10000,
   thin = 10,
   alpha = 1,
-  a_L = 10,
-  b_L = 50,
+  a_L = 5,
+  b_L = 5,
   a_U = 10^4,
   b_U = 10,
+  g_prior = 1/4,
   Lambda = NULL
 )
 }
 \arguments{
-\item{ps}{A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.}
+\item{ps}{A phyloseq object containing an otu_table() and a phy_tree() with an edge matrix.  That is, otu_table(ps) and phy_tree(ps)$edge both exist.  Further, the otu_table(ps) should have taxa corresponding to rows adn samples corresponding to columns.}
 
 \item{K}{An integer specifying the number of modeled subcommunities.}
 
@@ -34,13 +35,15 @@ LTNLDA_cov(
 
 \item{alpha}{A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.}
 
-\item{a_L}{A double which is multipled by the scale matrix in the Inverse Wishart prior for the lower covariance matrix.  The default value is 10.}
+\item{a_L}{A double such that the degrees of freedom for the G-Wishart prior for the lower precision matrix is a_L(p_L+2).  The default value is 5.}
 
-\item{b_L}{A double which is multipled by the degrees of freedom in the Inverse Wishart prior for the lower covariance matrix.  The default value is 50.}
+\item{b_L}{A double such that the scale matrix for the G-Wishart prior for the lower precision matrix is b_L(p+2)diag(p_L.  The default value is 5.}
 
-\item{a_U}{A double which is multipled by the scale matrix in the Inverse Wishart prior for the upeer covariance matrix.  The default value is 10^4.}
+\item{a_U}{A double controlling the scale parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10^4.}
 
-\item{b_U}{A double which is multipled by the degrees of freedom in the Inverse Wishart prior for the upper covariance matrix.  The default value is 10.}
+\item{b_U}{A double controlling the rate parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10.}
+
+\item{g_prior}{A double specifying the prior probability that there is an edge between two nodes in the lower covariance matrix.  The default value is 1/4.}
 
 \item{Lambda}{A matrix specifying a covariance prior for the mu_k.  The default value is diag(V) where V is the number of leaves.}
 }
@@ -49,6 +52,7 @@ A list with 8 entries.
 Mean_Post_Phi_d contains the posterior mean estimate for the subcommunity-sample distributions phi_d. 
 Mean_Post_Beta_kd contains the posterior mean estimate for the sample and subcommunity specific multinomial distributions beta_{k,d}.
 Mean_Post_Beta_k contains the posterior mean estimates for the average subcommunity multinomial distributions beta_k. 
+Mean_Post_G_L contains the posterior mean of the edge matrix denoting the probability edges are conditionally dependent for each subcomunity.
 Chain_Phi contains the Markov Chains for the phi_d. 
 Chain_Psi contains the Markov Chains for the psi_{p,d,k}. 
 Chain_Mu contains the Markov Chains for the mu_k. 
