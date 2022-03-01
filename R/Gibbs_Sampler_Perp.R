@@ -443,9 +443,7 @@ LTNLDA_Perplexity = function(model, ps,
             #W_ppk[,,k] is the inverse of Sigma_ppk[,,k]
             W_ppk = array(0,dim=c(p,p,K))
             for(k in 1:K){
-              for(a in 1:p){
-                W_ppk[a,a,k] = 1/Sigma_ppk[a,a,k]
-              }
+                W_ppk[,,k] = solve(Sigma_ppk[,,k])
             }
 
             #initialize mean vectors mu_pk from the posterior means
