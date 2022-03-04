@@ -1797,7 +1797,7 @@ List LTN_Gibbs_cov_gwish_C(List &results, Function f_pg, Function f_gwish,
   arma::vec exist_ind_L(p);
   arma::vec rates_L(p);
   double waiting_time_L;
-  double m_L_star = a_L*(p_L+2) + D;
+  double m_L_star = a_L+(p_L+2) + D;
   arma::mat M_L = b_L*Phi_L;
   arma::mat M_L_star(p,p);
   

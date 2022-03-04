@@ -37,7 +37,7 @@
 
 LTNLDA_cov = function(ps, K, C = 5,
                   iterations = 1000, burnin = 10000, thin = 10,
-                  alpha = 1, a_L = 5, b_L = 5, a_U = 10^4, b_U = 10, 
+                  alpha = 1, a_L = 10, b_L = 10, a_U = 10^4, b_U = 10, 
                   g_prior = 1/4,
                   Lambda = NULL){
   
@@ -262,9 +262,6 @@ LTNLDA_cov = function(ps, K, C = 5,
       Phi_U = diag(p_U)
       Phi_L = diag(p_L)
       
-      #scale hyperprior for b_L
-      b_L = (p_L+2)*b_L
-      
       #check if Lambda has been specified --- if not, specify as identity matrix
       if(is.null(Lambda)){
         Lambda = diag(p)
@@ -474,7 +471,7 @@ LTNLDA_cov = function(ps, K, C = 5,
       #W_L_ppk[,,k] is the lower precision matrix associated with subcommunity k
       W_L_ppk =  array(0,dim=c(p_L,p_L,K))
       for(k in 1:K){
-        W_L_ppk[,,k] = f_gwish(G_L_ppk[,,k],a_L*(p_L+2),b_L*Phi_L)
+        W_L_ppk[,,k] = f_gwish(G_L_ppk[,,k],a_L+(p_L+2),b_L*Phi_L)
       }
       #Sigma_L_ppk[,,k] is the lower covariance matrix associated with subcommunity k
       Sigma_L_ppk = array(0,dim=c(p_L,p_L,K))
