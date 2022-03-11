@@ -12,8 +12,8 @@ LTNLDA_cov(
   burnin = 10000,
   thin = 10,
   alpha = 1,
-  a_L = 10,
-  b_L = 10,
+  a_L = 100,
+  b_L = 200,
   a_U = 10^4,
   b_U = 10,
   g_prior = 1/4,
@@ -35,13 +35,13 @@ LTNLDA_cov(
 
 \item{alpha}{A double specifying the prior on the subcommunity-sample proportions.  The default value is 1.}
 
-\item{a_L}{A double such that the degrees of freedom for the G-Wishart prior for the lower precision matrix is a_L(p_L+2).  The default value is 5.}
+\item{a_L}{A double such that the degrees of freedom for the G-Wishart prior for the lower precision matrix is a_L+p_L+2.  The default value is 100.}
 
-\item{b_L}{A double such that the scale matrix for the G-Wishart prior for the lower precision matrix is b_L(p+2)diag(p_L.  The default value is 5.}
+\item{b_L}{A double such that the scale matrix for the G-Wishart prior for the lower precision matrix is b_L*diag(p_L.  The default value is 200.}
 
 \item{a_U}{A double controlling the scale parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10^4.}
 
-\item{b_U}{A double controlling the rate parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10.}
+\item{b_U}{A double controlling the rate parameter in the inverse-Gamma distribution for the upper covariance values.  The default value is 10}
 
 \item{g_prior}{A double specifying the prior probability that there is an edge between two nodes in the lower covariance matrix.  The default value is 1/4.}
 
