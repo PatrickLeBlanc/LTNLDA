@@ -58,10 +58,12 @@ List LTN_Gibbs_C(List &results, Function f_pg,
   NumericVector pg_draw(1);
   arma::mat v_diag(p,p);
   arma::mat psi_cov(p,p);
+  arma::mat psi_chol(p,p);
   arma::vec psi_mean(p);
   arma::mat psi_draw(p,1);
   arma::vec psi_bar(p);
   arma::mat mu_cov(p,p);
+  arma::mat mu_chol(p,p);
   arma::vec mu_mean(p);
   arma::mat draw(p,1);
   
@@ -229,14 +231,22 @@ List LTN_Gibbs_C(List &results, Function f_pg,
         
         psi_cov = W + v_diag;
         psi_cov = arma::symmatu(psi_cov);
-        psi_cov = arma::inv(psi_cov); //Do in two steps for memory?
+        for(int a=0; a<p; a++){
+          psi_cov(a,a) = 1/psi_cov(a,a);
+        }
+        // psi_cov = arma::inv(psi_cov); //Do in two steps for memory?
         psi_mean = psi_cov * (avg + kappa.col(d));
         psi_draw = Rcpp::rnorm(p,0,1);
         
         //Do in two steps for memory?
         psi_cov = arma::symmatu(psi_cov);
-        psi_cov = chol(psi_cov);
-        psi.col(d) = psi_cov*psi_draw + psi_mean;
+        for(int a=0; a<p; a++){
+          psi_chol(a,a) = sqrt(psi_cov(a,a));
+        }
+        psi.col(d) = psi_chol*psi_draw + psi_mean;
+        
+        // psi_cov = chol(psi_cov);
+        // psi.col(d) = psi_cov*psi_draw + psi_mean;
       }
       psi_pdk.slice(k) = psi;
       
@@ -254,15 +264,23 @@ List LTN_Gibbs_C(List &results, Function f_pg,
       ///////////////
       mu_cov = Lambda_inv + D*W;
       mu_cov = arma::symmatu(mu_cov);
-      mu_cov = arma::inv(mu_cov); //do in two steps for memory
+      for(int a=0; a<p; a++){
+        mu_cov(a,a) = 1/mu_cov(a,a);
+      }
+      // mu_cov = arma::inv(mu_cov); //do in two steps for memory
       mu_mean = ((mu_cov) * W ) * (psi_bar) * D;
       
       //do some rearranging for memory reasons
       mu_cov = arma::symmatu(mu_cov);
-      mu_cov = chol(mu_cov);
-      
+      for(int a=0; a<p; a++){
+        mu_chol(a,a) = sqrt(mu_cov(a,a));
+      }
       draw = Rcpp::rnorm(p,0,1);
-      mu = mu_cov*draw + mu_mean;
+      mu = mu_chol*draw + mu_mean;
+      
+      // mu_cov = chol(mu_cov);
+      // draw = Rcpp::rnorm(p,0,1);
+      // mu = mu_cov*draw + mu_mean;
       mu_pk.col(k) = mu;
       
       ///////////////////////
@@ -281,7 +299,10 @@ List LTN_Gibbs_C(List &results, Function f_pg,
       }
       Sigma = arma::symmatu(Sigma);
       Sigma_ppk.slice(k) = Sigma;
-      W = arma::inv(Sigma);
+      for(int a=0; a<p; a++){
+        W(a,a) = 1/Sigma(a,a);
+      }
+      // W = arma::inv(Sigma);
       W = arma::symmatu(W);
       W_ppk.slice(k) = W;
       
