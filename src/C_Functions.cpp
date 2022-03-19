@@ -229,6 +229,7 @@ List LTN_Gibbs_C(List &results, Function f_pg,
           v_diag(v_diag_ct,v_diag_ct) = v(v_diag_ct,d);
         }
         
+        psi_chol = psi_chol.zeros();
         psi_cov = W + v_diag;
         psi_cov = arma::symmatu(psi_cov);
         for(int a=0; a<p; a++){
@@ -262,6 +263,7 @@ List LTN_Gibbs_C(List &results, Function f_pg,
       ///////////////
       // Update Mu //
       ///////////////
+      mu_chol = mu_chol.zeros();
       mu_cov = Lambda_inv + D*W;
       mu_cov = arma::symmatu(mu_cov);
       for(int a=0; a<p; a++){
