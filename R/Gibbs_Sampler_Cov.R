@@ -1,4 +1,4 @@
-#' Runs an LTN-LDA Gibbs sampler.  Experimental, trying out a new covariance structure.  Run at own risk.  
+#' Runs a Block LTN-LDA Gibbs sampler.  Encodes block g-wishart priors.
 #'
 #' This function takes a phyloseq object and the modelled number of subcommunities as inputs. It runs a collapsed blocked Gibbs sampler for LTNLDA, and returns a list containing posterior mean estimates for some parameters, Markov Chains for all meaningful parameters, and the phyloseq object.  For a detailed example see the vignette "LTN-LDA".
 #'
@@ -29,13 +29,13 @@
 #' @examples
 #' data("ps",package = "LTNLDA")
 #' K = 2
-#' model = LTNLDA(ps,K)
+#' model = LTNLDA_cov(ps,K)
 #' @references
 #' ADD PAPER INFORMATION ONCE WE KNOW IT
 #' @export
 
 
-LTNLDA_cov = function(ps, K, C = 5,
+block_LTNLDA = function(ps, K, C = 5,
                   iterations = 1000, burnin = 10000, thin = 10,
                   alpha = 1, a_L = 100, b_L = 200, a_U = 10^4, b_U = 10, 
                   g_prior = 1/4,

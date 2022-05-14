@@ -11,7 +11,7 @@ Description: A package implementing the LTN-LDA model proposed in PAPER.  There 
     of a fitted LTN-LDA model on a test set.  
 LazyData: true
 License: GPL (>= 3)
-Imports: Rcpp (>= 1.0.7), pgdraw, phyloseq, stats, MCMCpack, BayesianGLasso, BDgraph
+Imports: Rcpp (>= 1.0.7), pgdraw, phyloseq, stats
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.2
 Depends: 

@@ -242,4 +242,4 @@ ps
 # References 
 
 * Les Dethlefsen and David A. Relman. Incomplete recovery and individualized responses of the human distal gut microbiota to repeated antibiotic perturbation. Proceedings of the National Academy of the Sciences of the United States of America. 18(Supplement 1): 4554-4561, 2011.
-* LeBlanc and Ma
+* Patrick LeBlanc and Li Ma.  Microbiome subcommunity learning with logistic-tree normal latent Dirichlet allocation.  https://arxiv.org/abs/2109.05386, 2022.

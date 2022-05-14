@@ -172,5 +172,5 @@ plot(chain_psi_k[,p,d],type="l",
 # References 
 
 * Les Dethlefsen and David A. Relman. Incomplete recovery and individualized responses of the human distal gut microbiota to repeated antibiotic perturbation. Proceedings of the National Academy of the Sciences of the United States of America. 18(Supplement 1): 4554-4561, 2011.
-* LeBlanc and Ma
+* Patrick LeBlanc and Li Ma.  Microbiome subcommunity learning with logistic-tree normal latent Dirichlet allocation.  https://arxiv.org/abs/2109.05386, 2022.
 *  Hanna M. Wallach, Iain Murray, Ruslan Salakhutdinov, and David Mimno. Evaluation methods for topic models. Proceedings of the 26th Annual International Conference on Machine Learning, page 1105–1112, 2009.

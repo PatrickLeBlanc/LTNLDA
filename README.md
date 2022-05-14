@@ -54,8 +54,10 @@ model = LTNLDA(ps,K)
 
 Summary is a function which provides a high level summary of the model’s
 inference. We include the average abundance of subcommunities across
-samples as well as the top *n* ASVs in each subcommunity and their
-prevalances. More information is included in the “LTN-LDA” vignette.
+samples as well as the top
+![n](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;n "n")
+ASVs in each subcommunity and their prevalances. More information is
+included in the “LTN-LDA” vignette.
 
 ``` r
 sum = Summary(model)
@@ -111,6 +113,12 @@ model = LTNLDA(ps,K)
 perp = LTNLDA_Perplexity(model = model, ps = test_ps)
 ```
 
+## block\_LTNLDA
+
+This function runs a Gibbs sampler for the Block LTN-LDA model. We
+recommend using the LTN-LDA model instead of the block LTN-LDA model,
+but provide the user with the tools to run this model if they so wish.
+
 ## Vignettes
 
 To access the vignettes, use this code:
@@ -126,7 +134,9 @@ browseVignettes("LTNLDA")
     repeated antibiotic perturbation. Proceedings of the National
     Academy of the Sciences of the United States of America.
     18(Supplement 1): 4554-4561, 2011.
--   LeBlanc and Ma
+-   Patrick LeBlanc and Li Ma. Microbiome subcommunity learning with
+    logistic-tree normal latent Dirichlet allocation.
+    <https://arxiv.org/abs/2109.05386>, 2022.
 
 Additionally, I inspiration for coding a collapsed LDA Gibbs sampler
 from:
